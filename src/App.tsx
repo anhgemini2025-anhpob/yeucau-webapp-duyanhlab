@@ -27,17 +27,24 @@ import {
   Globe,
   Smartphone,
   Share2,
-  Download
+  Download,
+  Languages
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import {
+  LangCode,
+  SUPPORTED_LANGUAGES,
+  APP_TARGET_LANGUAGES,
+  TRANSLATIONS,
+  PresetItem
+} from './i18n';
 
-interface RoleConfig {
+interface RoleState {
   id: string;
-  name: string;
   enabled: boolean;
   count: string;
-  permissions: string;
+  customPermissions?: string;
 }
 
 interface CapturedImage {
@@ -54,218 +61,43 @@ interface AttachedDoc {
   file: File;
 }
 
-const QUICK_PRESETS = [
-  {
-    id: 'erp',
-    label: '🏢 Quản lý DN / Hợp đồng',
-    projectName: 'Hệ thống Quản lý Hợp đồng & Vận hành Doanh nghiệp',
-    painPoints: ['Excel / Sổ sách rời rạc', 'Mất thời gian tổng hợp báo cáo', 'Khó kiểm soát tiến độ & nhân sự'],
-    goals: ['Tự động hóa quy trình 80-90%', 'Quản lý tập trung Real-time', 'Dashboard biểu đồ trực quan'],
-    infra: ['Cloud (Đám mây - Khuyên dùng)', 'Dữ liệu Real-time (Tức thời)', 'Xuất Excel / In PDF chuẩn A4'],
-    scale: ['Đa thiết bị (ĐT, iPad, Laptop)', 'Dưới 100 người dùng/lúc'],
-    security: ['Mã hóa mật khẩu / Phân quyền', 'Lưu vết lịch sử thao tác (Log)'],
-    style: 'Sang trọng (Navy & Gold)',
-    customNote: 'Cần quản lý khách hàng, hợp đồng, nhắc việc tự động và xuất phiếu/báo cáo chuẩn trên 1 trang A4.'
-  },
-  {
-    id: 'tax',
-    label: '📊 Thuế HKD / Tài chính',
-    projectName: 'Ứng dụng Quản lý Doanh thu & Báo cáo Thuế Hộ Kinh Doanh',
-    painPoints: ['Excel / Sổ sách rời rạc', 'Mất thời gian tổng hợp báo cáo'],
-    goals: ['Tự động hóa quy trình 80-90%', 'Dashboard biểu đồ trực quan', 'Chuẩn hóa phân quyền & Bảo mật'],
-    infra: ['Cloud (Đám mây - Khuyên dùng)', 'Xuất Excel / In PDF chuẩn A4', 'Kết nối Zalo / Email / VietQR'],
-    scale: ['Đa thiết bị (ĐT, iPad, Laptop)', 'Dưới 100 người dùng/lúc'],
-    security: ['Mã hóa mật khẩu / Phân quyền', 'Tiêu chuẩn riêng (Tài chính / Y tế)'],
-    style: 'Hiện đại Sáng sủa (Clean SaaS)',
-    customNote: 'Tự động tổng hợp sổ doanh thu, chi phí, xuất tờ khai / báo cáo thuế nhanh gọn và chính xác.'
-  },
-  {
-    id: 'ai',
-    label: '🤖 Trợ lý AI / R&D Chuyên gia',
-    projectName: 'Hệ thống AI Advisor Tư vấn Chuyên môn & Tra cứu Công thức',
-    painPoints: ['Chưa có công cụ AI hỗ trợ chuyên môn', 'Khách hàng khó đặt lịch / tra cứu'],
-    goals: ['Trợ lý AI tư vấn / R&D / Phân tích', 'Quản lý tập trung Real-time', 'Tăng uy tín & Chuyển đổi khách hàng'],
-    infra: ['Cloud (Đám mây - Khuyên dùng)', 'Dữ liệu Real-time (Tức thời)', 'Xuất Excel / In PDF chuẩn A4'],
-    scale: ['Đa thiết bị (ĐT, iPad, Laptop)', '100 - 1.000 người dùng/lúc', 'Đa ngôn ngữ (Việt / Anh / Hàn / Trung)'],
-    security: ['Mã hóa mật khẩu / Phân quyền'],
-    style: 'Sang trọng (Navy & Gold)',
-    customNote: 'Tích hợp AI tra cứu dữ liệu chuyên ngành (Mỹ phẩm / F&B / Y tế / Ngân hàng), gợi ý giải pháp và xuất báo cáo.'
-  },
-  {
-    id: 'crm',
-    label: '🛒 Bán hàng / Đặt lịch CRM',
-    projectName: 'Web App Đặt lịch Dịch vụ & Chăm sóc Khách hàng CRM',
-    painPoints: ['Khách hàng khó đặt lịch / tra cứu', 'Excel / Sổ sách rời rạc'],
-    goals: ['Khách tự đặt lịch / Tra cứu dễ dàng', 'Tăng uy tín & Chuyển đổi khách hàng', 'Tự động hóa quy trình 80-90%'],
-    infra: ['Cloud (Đám mây - Khuyên dùng)', 'Dữ liệu Real-time (Tức thời)', 'Kết nối Zalo / Email / VietQR'],
-    scale: ['Đa thiết bị (ĐT, iPad, Laptop)', '100 - 1.000 người dùng/lúc'],
-    security: ['Mã hóa mật khẩu / Phân quyền', 'Xác thực 2 lớp (OTP/Email)'],
-    style: 'Theo màu Thương hiệu riêng',
-    customNote: 'Khách hàng thao tác siêu nhanh trên điện thoại, đặt yêu cầu/lịch hẹn và nhận thông báo qua Zalo/Email.'
-  },
-  {
-    id: 'edu',
-    label: '🎓 Đào tạo / E-Learning',
-    projectName: 'Nền tảng Đào tạo Nội bộ, Học & Thi Trực tuyến Thông minh',
-    painPoints: ['Khó kiểm soát tiến độ & nhân sự', 'Chưa có công cụ AI hỗ trợ chuyên môn'],
-    goals: ['Tự động hóa quy trình 80-90%', 'Trợ lý AI tư vấn / R&D / Phân tích', 'Dashboard biểu đồ trực quan'],
-    infra: ['Cloud (Đám mây - Khuyên dùng)', 'Dữ liệu Real-time (Tức thời)', 'Xuất Excel / In PDF chuẩn A4'],
-    scale: ['Đa thiết bị (ĐT, iPad, Laptop)', '100 - 1.000 người dùng/lúc', 'Đa ngôn ngữ (Việt / Anh / Hàn / Trung)'],
-    security: ['Mã hóa mật khẩu / Phân quyền', 'Lưu vết lịch sử thao tác (Log)'],
-    style: 'Hiện đại Sáng sủa (Clean SaaS)',
-    customNote: 'Hỗ trợ bài giảng tương tác, phát âm / ghi âm, chấm điểm tự động và theo dõi năng lực học viên.'
-  },
-  {
-    id: 'landing',
-    label: '🌐 Landing Page Cao cấp',
-    projectName: 'Landing Page Giới thiệu Thương hiệu & Thu thập Yêu cầu Khách hàng',
-    painPoints: ['Khách hàng khó đặt lịch / tra cứu', 'Phần mềm cũ chậm, khó dùng trên ĐT'],
-    goals: ['Tăng uy tín & Chuyển đổi khách hàng', 'Khách tự đặt lịch / Tra cứu dễ dàng'],
-    infra: ['Cloud (Đám mây - Khuyên dùng)', 'Xuất Excel / In PDF chuẩn A4', 'Kết nối Zalo / Email / VietQR'],
-    scale: ['Đa thiết bị (ĐT, iPad, Laptop)', 'Trên 1.000 người dùng/lúc'],
-    security: ['Mã hóa mật khẩu / Phân quyền'],
-    style: 'Sang trọng (Navy & Gold)',
-    customNote: 'Thiết kế sang trọng trên 1 màn hình, tương thích mọi thiết bị, cho phép khách gửi yêu cầu hoặc in 1 trang A4.'
-  }
-];
-
-const PAIN_POINT_OPTIONS = [
-  'Excel / Sổ sách rời rạc',
-  'Mất thời gian tổng hợp báo cáo',
-  'Khó kiểm soát tiến độ & nhân sự',
-  'Chưa có công cụ AI hỗ trợ chuyên môn',
-  'Khách hàng khó đặt lịch / tra cứu',
-  'Phần mềm cũ chậm, khó dùng trên ĐT'
-];
-
-const GOAL_OPTIONS = [
-  'Tự động hóa quy trình 80-90%',
-  'Quản lý tập trung Real-time',
-  'Trợ lý AI tư vấn / R&D / Phân tích',
-  'Khách tự đặt lịch / Tra cứu dễ dàng',
-  'Dashboard biểu đồ trực quan',
-  'Tăng uy tín & Chuyển đổi khách hàng'
-];
-
-const INFRA_OPTIONS = [
-  'Cloud (Đám mây - Khuyên dùng)',
-  'Máy chủ nội bộ (Local/On-premise)',
-  'Dữ liệu Real-time (Tức thời)',
-  'Xuất Excel / In PDF chuẩn A4',
-  'Kết nối Zalo / Email / VietQR'
-];
-
-const SCALE_OPTIONS = [
-  'Đa thiết bị (ĐT, iPad, Laptop)',
-  'Dưới 100 người dùng/lúc',
-  '100 - 1.000 người dùng/lúc',
-  'Trên 1.000 người dùng/lúc',
-  'Đa ngôn ngữ (Việt / Anh / Hàn / Trung)'
-];
-
-const SECURITY_OPTIONS = [
-  'Mã hóa mật khẩu / Phân quyền',
-  'Xác thực 2 lớp (OTP/Email)',
-  'Lưu vết lịch sử thao tác (Log)',
-  'Tiêu chuẩn riêng (Tài chính / Y tế)'
-];
-
-const STYLE_OPTIONS = [
-  'Sang trọng (Navy & Gold)',
-  'Hiện đại Sáng sủa (Clean SaaS)',
-  'Dashboard Dữ liệu Chuyên sâu',
-  'Theo màu Thương hiệu riêng'
-];
-
-const TIMELINE_OPTIONS = [
-  '⚡ Cần gấp (3 - 7 ngày)',
-  '📅 Tiêu chuẩn (2 - 4 tuần)',
-  '🚀 Phát triển theo giai đoạn',
-  '💡 Tư vấn phương án tối ưu'
-];
-
-const DOC_TYPE_OPTIONS = [
-  'File Excel / Google Sheets đang dùng',
-  'Quy trình làm việc (Word / Flowchart)',
-  'Biểu mẫu giấy đang dùng (Chụp ảnh)',
-  'Ảnh chụp màn hình phần mềm cũ',
-  'Bản vẽ tay ý tưởng / Trang web mẫu'
-];
-
-const DEFAULT_ROLES: RoleConfig[] = [
-  {
-    id: 'admin',
-    name: 'Admin (Quản trị)',
-    enabled: true,
-    count: '1 - 2',
-    permissions: 'Toàn quyền cấu hình hệ thống, phân quyền, quản lý dữ liệu & báo cáo tổng'
-  },
-  {
-    id: 'manager',
-    name: 'Quản lý (Manager)',
-    enabled: true,
-    count: '2 - 5',
-    permissions: 'Xem Dashboard, duyệt yêu cầu/báo cáo, kiểm soát công việc bộ phận'
-  },
-  {
-    id: 'staff',
-    name: 'Nhân viên (Staff)',
-    enabled: true,
-    count: '5 - 30',
-    permissions: 'Nhập liệu, xử lý nghiệp vụ hàng ngày theo quyền được giao'
-  },
-  {
-    id: 'customer',
-    name: 'Khách hàng / Đối tác',
-    enabled: true,
-    count: 'Không giới hạn',
-    permissions: 'Tra cứu thông tin, gửi yêu cầu, đặt lịch hoặc tải kết quả PDF'
-  }
-];
-
 export default function App() {
+  // Active UI Language (vi, en, zh, ja, ko)
+  const [lang, setLang] = useState<LangCode>('vi');
+  const t = TRANSLATIONS[lang];
+  const currentLangMeta = SUPPORTED_LANGUAGES.find((l) => l.code === lang) || SUPPORTED_LANGUAGES[0];
+
   // 1. General Info
   const [companyName, setCompanyName] = useState('');
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [projectName, setProjectName] = useState('');
-  const [timeline, setTimeline] = useState('📅 Tiêu chuẩn (2 - 4 tuần)');
+  const [timelineIdx, setTimelineIdx] = useState<number>(1);
 
-  // 2. Pain Points & Goals
-  const [selectedPainPoints, setSelectedPainPoints] = useState<string[]>([
-    'Excel / Sổ sách rời rạc',
-    'Mất thời gian tổng hợp báo cáo'
-  ]);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([
-    'Tự động hóa quy trình 80-90%',
-    'Quản lý tập trung Real-time'
-  ]);
+  // 2. Pain Points & Goals (stored as option indices so switching language translates them seamlessly!)
+  const [painPointsIdx, setPainPointsIdx] = useState<number[]>([0, 1]);
+  const [goalsIdx, setGoalsIdx] = useState<number[]>([0, 1]);
   const [customNote, setCustomNote] = useState('');
 
-  // 3. Technical, Scale, Security & Style
-  const [selectedInfra, setSelectedInfra] = useState<string[]>([
-    'Cloud (Đám mây - Khuyên dùng)',
-    'Dữ liệu Real-time (Tức thời)',
-    'Xuất Excel / In PDF chuẩn A4'
-  ]);
-  const [selectedScale, setSelectedScale] = useState<string[]>([
-    'Đa thiết bị (ĐT, iPad, Laptop)',
-    'Dưới 100 người dùng/lúc'
-  ]);
-  const [selectedSecurity, setSelectedSecurity] = useState<string[]>([
-    'Mã hóa mật khẩu / Phân quyền'
-  ]);
-  const [selectedStyle, setSelectedStyle] = useState('Sang trọng (Navy & Gold)');
-  const [languageNote, setLanguageNote] = useState('Tiếng Việt (Mặc định)');
+  // 3. Technical, Scale, Security, Style & Target App Languages (Việt, Anh, Hoa, Nhật, Hàn)
+  const [infraIdx, setInfraIdx] = useState<number[]>([0, 2, 3]);
+  const [scaleIdx, setScaleIdx] = useState<number[]>([0, 1]);
+  const [securityIdx, setSecurityIdx] = useState<number[]>([0]);
+  const [styleIdx, setStyleIdx] = useState<number>(0);
+  // Selected languages for the customer's Web App (indices 0..4 => Việt, Anh, Hoa, Nhật, Hàn)
+  const [selectedAppLangsIdx, setSelectedAppLangsIdx] = useState<number[]>([0, 1]);
 
   // 4. Roles & Permissions
-  const [roles, setRoles] = useState<RoleConfig[]>(DEFAULT_ROLES);
+  const [roleStates, setRoleStates] = useState<RoleState[]>([
+    { id: 'admin', enabled: true, count: '1 - 2' },
+    { id: 'manager', enabled: true, count: '2 - 5' },
+    { id: 'staff', enabled: true, count: '5 - 30' },
+    { id: 'customer', enabled: true, count: 'Unlimited' }
+  ]);
 
   // 5. Voice Recording, Speech-to-Text, Camera Photos & Attachments
-  const [selectedDocTypes, setSelectedDocTypes] = useState<string[]>([
-    'File Excel / Google Sheets đang dùng'
-  ]);
+  const [docTypesIdx, setDocTypesIdx] = useState<number[]>([0]);
   const [referenceLink, setReferenceLink] = useState('');
   const [capturedImages, setCapturedImages] = useState<CapturedImage[]>([]);
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([]);
@@ -276,7 +108,6 @@ export default function App() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isDictating, setIsDictating] = useState(false);
-  const [voiceNoteSummary, setVoiceNoteSummary] = useState('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -320,7 +151,7 @@ export default function App() {
         if (items[i].type.indexOf('image') !== -1) {
           const file = items[i].getAsFile();
           if (file) {
-            addImageFile(file, `Anh-chup-man-hinh-${Date.now().toString().slice(-4)}.png`);
+            addImageFile(file, `Screenshot-${Date.now().toString().slice(-4)}.png`);
           }
         }
       }
@@ -334,25 +165,45 @@ export default function App() {
     setTimeout(() => setCopiedToast(null), 3200);
   };
 
-  const toggleItem = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
-    if (list.includes(item)) {
-      setList(list.filter((i) => i !== item));
+  const toggleIndex = (
+    list: number[],
+    setList: React.Dispatch<React.SetStateAction<number[]>>,
+    idx: number
+  ) => {
+    if (list.includes(idx)) {
+      setList(list.filter((i) => i !== idx));
     } else {
-      setList([...list, item]);
+      setList([...list, idx].sort((a, b) => a - b));
     }
   };
 
-  const applyPreset = (preset: typeof QUICK_PRESETS[0]) => {
+  const handleSwitchLanguage = (newLang: LangCode) => {
+    setLang(newLang);
+    // If active preset was selected, update projectName & customNote to match the new language
+    if (activePreset) {
+      const presetInNewLang = TRANSLATIONS[newLang].presets.find((p) => p.id === activePreset);
+      if (presetInNewLang) {
+        setProjectName(presetInNewLang.projectName);
+        setCustomNote(presetInNewLang.customNote);
+      }
+    }
+    const meta = SUPPORTED_LANGUAGES.find((l) => l.code === newLang);
+    if (meta) {
+      showToast(`${meta.flag} ${meta.fullName}`);
+    }
+  };
+
+  const applyPreset = (preset: PresetItem) => {
     setActivePreset(preset.id);
     setProjectName(preset.projectName);
-    setSelectedPainPoints(preset.painPoints);
-    setSelectedGoals(preset.goals);
-    setSelectedInfra(preset.infra);
-    setSelectedScale(preset.scale);
-    setSelectedSecurity(preset.security);
-    setSelectedStyle(preset.style);
+    setPainPointsIdx(preset.painPointsIdx);
+    setGoalsIdx(preset.goalsIdx);
+    setInfraIdx(preset.infraIdx);
+    setScaleIdx(preset.scaleIdx);
+    setSecurityIdx(preset.securityIdx);
+    setStyleIdx(preset.styleIdx);
     setCustomNote(preset.customNote);
-    showToast(`Đã áp dụng mẫu: ${preset.label}`);
+    showToast(`✓ ${preset.label}`);
   };
 
   const resetForm = () => {
@@ -362,27 +213,31 @@ export default function App() {
     setContactPhone('');
     setContactEmail('');
     setProjectName('');
-    setTimeline('📅 Tiêu chuẩn (2 - 4 tuần)');
-    setSelectedPainPoints(['Excel / Sổ sách rời rạc']);
-    setSelectedGoals(['Tự động hóa quy trình 80-90%']);
+    setTimelineIdx(1);
+    setPainPointsIdx([0]);
+    setGoalsIdx([0]);
     setCustomNote('');
-    setSelectedInfra(['Cloud (Đám mây - Khuyên dùng)', 'Dữ liệu Real-time (Tức thời)', 'Xuất Excel / In PDF chuẩn A4']);
-    setSelectedScale(['Đa thiết bị (ĐT, iPad, Laptop)', 'Dưới 100 người dùng/lúc']);
-    setSelectedSecurity(['Mã hóa mật khẩu / Phân quyền']);
-    setSelectedStyle('Sang trọng (Navy & Gold)');
-    setLanguageNote('Tiếng Việt (Mặc định)');
-    setRoles(DEFAULT_ROLES);
-    setSelectedDocTypes([]);
+    setInfraIdx([0, 2, 3]);
+    setScaleIdx([0, 1]);
+    setSecurityIdx([0]);
+    setStyleIdx(0);
+    setSelectedAppLangsIdx([0, 1]);
+    setRoleStates([
+      { id: 'admin', enabled: true, count: '1 - 2' },
+      { id: 'manager', enabled: true, count: '2 - 5' },
+      { id: 'staff', enabled: true, count: '5 - 30' },
+      { id: 'customer', enabled: true, count: 'Unlimited' }
+    ]);
+    setDocTypesIdx([]);
     setReferenceLink('');
     setCapturedImages([]);
     setAttachedDocs([]);
     setAudioUrl(null);
     setAudioBlob(null);
-    setVoiceNoteSummary('');
-    showToast('Đã làm mới toàn bộ biểu mẫu');
+    showToast('✓ Reset');
   };
 
-  // Voice Recorder + Speech Recognition
+  // Voice Recorder + Speech Recognition in active language (vi-VN, en-US, zh-CN, ja-JP, ko-KR)
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -400,7 +255,7 @@ export default function App() {
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
         setAudioUrl(url);
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       recorder.start();
@@ -412,12 +267,12 @@ export default function App() {
         setRecordingSeconds((prev) => prev + 1);
       }, 1000);
 
-      // Also start SpeechRecognition (Vietnamese) if available to auto-transcribe
+      // Also start SpeechRecognition in current language to auto-transcribe
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
-        recognition.lang = 'vi-VN';
+        recognition.lang = currentLangMeta.speechLang;
         recognition.continuous = true;
         recognition.interimResults = false;
         recognition.onresult = (event: any) => {
@@ -431,21 +286,18 @@ export default function App() {
             setCustomNote((prev) =>
               prev ? `${prev.trim()} ${transcript.trim()}` : transcript.trim()
             );
-            setVoiceNoteSummary((prev) =>
-              prev ? `${prev.trim()} ${transcript.trim()}` : transcript.trim()
-            );
           }
         };
         try {
           recognition.start();
           recognitionRef.current = recognition;
         } catch {
-          // Ignore speech recognition start error if already active
+          // Ignore speech recognition start error
         }
       }
-    } catch (err) {
+    } catch {
       alert(
-        'Không thể truy cập Microphone. Vui lòng cấp quyền Micro trên trình duyệt hoặc sử dụng nút Đính kèm file ghi âm.'
+        'Không thể truy cập Microphone / Microphone permission denied. Please allow microphone access or use Attach File.'
       );
     }
   };
@@ -467,7 +319,7 @@ export default function App() {
       }
       recognitionRef.current = null;
     }
-    showToast('Đã lưu bản ghi âm yêu cầu của bạn!');
+    showToast('🎙️ Saved Voice Recording!');
   };
 
   // Speech-to-text only button for the note box
@@ -486,7 +338,7 @@ export default function App() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'vi-VN';
+    recognition.lang = currentLangMeta.speechLang;
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.onstart = () => setIsDictating(true);
@@ -496,7 +348,7 @@ export default function App() {
       const text = event.results[0]?.[0]?.transcript;
       if (text) {
         setCustomNote((prev) => (prev ? `${prev.trim()}. ${text}` : text));
-        showToast('Đã chuyển giọng nói thành văn bản!');
+        showToast('✓ Voice transcribed!');
       }
     };
     recognition.start();
@@ -511,7 +363,7 @@ export default function App() {
     return `${m}:${s}`;
   };
 
-  // Camera & Image Handling (resizes image for fast preview & clean 1-page A4 print)
+  // Camera & Image Handling
   const addImageFile = (file: File, customName?: string) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -537,7 +389,7 @@ export default function App() {
         const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
         setCapturedImages((prev) => [
-          ...prev.slice(0, 3), // Keep up to 4 images so A4 stays 1 page
+          ...prev.slice(0, 3),
           {
             id: `${Date.now()}-${Math.random()}`,
             name: customName || file.name,
@@ -545,7 +397,7 @@ export default function App() {
             file
           }
         ]);
-        showToast(`Đã thêm hình ảnh: ${customName || file.name}`);
+        showToast(`📷 + ${customName || file.name}`);
       };
       img.src = ev.target?.result as string;
     };
@@ -578,51 +430,71 @@ export default function App() {
         ]);
       }
     });
-    showToast('Đã đính kèm tài liệu!');
+    showToast('📎 File attached!');
     e.target.value = '';
   };
 
+  // Resolved selected strings in active language
+  const selectedPainPoints = painPointsIdx.map((i) => t.painPointsOptions[i]).filter(Boolean);
+  const selectedGoals = goalsIdx.map((i) => t.goalsOptions[i]).filter(Boolean);
+  const selectedInfra = infraIdx.map((i) => t.infraOptions[i]).filter(Boolean);
+  const selectedScale = scaleIdx.map((i) => t.scaleOptions[i]).filter(Boolean);
+  const selectedSecurity = securityIdx.map((i) => t.securityOptions[i]).filter(Boolean);
+  const selectedStyle = t.styleOptions[styleIdx] || t.styleOptions[0];
+  const selectedTimeline = t.timelineOptions[timelineIdx] || t.timelineOptions[1];
+  const selectedDocTypes = docTypesIdx.map((i) => t.docTypesOptions[i]).filter(Boolean);
+  const appLangOptions = APP_TARGET_LANGUAGES[lang];
+  const selectedAppLangs = selectedAppLangsIdx.map((i) => appLangOptions[i]).filter(Boolean);
+
   // Build formatted summary text for Email & Zalo
   const buildFormattedBriefText = () => {
-    const activeRoles = roles
+    const activeRoles = roleStates
+      .map((rs, idx) => {
+        const trans = t.defaultRoles[idx];
+        return {
+          ...rs,
+          name: trans?.name || rs.id,
+          permissions: rs.customPermissions ?? trans?.permissions ?? ''
+        };
+      })
       .filter((r) => r.enabled)
       .map((r) => `  • ${r.name} (${r.count} user): ${r.permissions}`)
       .join('\n');
 
     const lines = [
-      `📋 PHIẾU YÊU CẦU THIẾT KẾ WEB & ỨNG DỤNG — DUY ANH DIGITAL LAB`,
-      `Ngày lập: ${todayStr}`,
+      `📋 ${t.a4MainTitle} — DUY ANH DIGITAL LAB`,
+      `${t.a4DateLabel}: ${todayStr} | UI Language: ${currentLangMeta.fullName}`,
       `--------------------------------------------------`,
-      `1. THÔNG TIN CHUNG:`,
-      `• Đơn vị / Cá nhân: ${companyName || 'Chưa điền'}`,
-      `• Người liên hệ: ${contactName || 'Chưa điền'}`,
-      `• SĐT / Zalo: ${contactPhone || 'Chưa điền'}${contactEmail ? ` | Email: ${contactEmail}` : ''}`,
-      `• Tên Web App dự kiến: ${projectName || 'Trao đổi trực tiếp'}`,
-      `• Tiến độ mong muốn: ${timeline}`,
+      `${t.a4Sec1Title}:`,
+      `• ${t.companyLabel}: ${companyName || '---'}`,
+      `• ${t.contactLabel}: ${contactName || '---'}`,
+      `• ${t.phoneLabel}: ${contactPhone || '---'}${contactEmail ? ` | Email: ${contactEmail}` : ''}`,
+      `• ${t.projectLabel}: ${projectName || '---'}`,
+      `• ${t.timelineLabel} ${selectedTimeline}`,
       ``,
-      `2. HIỆN TRẠNG & MỤC TIÊU CẦN GIẢI QUYẾT:`,
-      `• Khó khăn hiện tại: ${selectedPainPoints.join(', ') || 'Trao đổi thêm'}`,
-      `• Mục tiêu kỳ vọng: ${selectedGoals.join(', ') || 'Trao đổi thêm'}`,
-      `• Ý tưởng & Yêu cầu riêng: ${customNote || 'Không có ghi chú thêm (Xem file ghi âm / ảnh đính kèm)'}`,
+      `${t.a4Sec2Title}:`,
+      `• Pain Points: ${selectedPainPoints.join(', ') || '---'}`,
+      `• Goals: ${selectedGoals.join(', ') || '---'}`,
+      `• ${t.customNoteLabel} ${customNote || '---'}`,
       ``,
-      `3. YÊU CẦU KỸ THUẬT & GIAO DIỆN:`,
-      `• Hạ tầng & Tính năng: ${selectedInfra.join(', ')}`,
-      `• Quy mô & Nền tảng: ${selectedScale.join(', ')} | Ngôn ngữ: ${languageNote}`,
-      `• Bảo mật & Tiêu chuẩn: ${selectedSecurity.join(', ')}`,
-      `• Phong cách Thiết kế: ${selectedStyle}`,
+      `${t.a4Sec3Title}:`,
+      `• ${t.a4ColInfra}: ${selectedInfra.join(', ')}`,
+      `• ${t.a4ColScale}: ${selectedScale.join(', ')}`,
+      `• 🌐 App Target Languages: ${selectedAppLangs.join(', ') || 'Tiếng Việt'}`,
+      `• ${t.a4ColSec}: ${selectedSecurity.join(', ')} | Style: ${selectedStyle}`,
       ``,
-      `4. PHÂN QUYỀN NGƯỜI DÙNG (ROLES):`,
-      activeRoles || '  • Mặc định theo tư vấn của Duy Anh Digital Lab',
+      `${t.a4Sec4Title}:`,
+      activeRoles || '  • Default',
       ``,
-      `5. GHI ÂM, HÌNH ẢNH & TÀI LIỆU ĐÍNH KÈM:`,
-      `• Loại tài liệu sẵn có: ${selectedDocTypes.join(', ') || 'Chưa chọn'}`,
-      `• Ghi âm giọng nói: ${audioUrl ? `Có file ghi âm (${formatDuration(recordingSeconds)})` : 'Không'}`,
-      `• Ảnh chụp / Ảnh mẫu: ${capturedImages.length > 0 ? `${capturedImages.length} hình ảnh (${capturedImages.map((i) => i.name).join(', ')})` : 'Không'}`,
-      `• File đính kèm: ${attachedDocs.length > 0 ? attachedDocs.map((d) => d.name).join(', ') : 'Không'}`,
-      `• Link tham khảo / Drive: ${referenceLink || 'Không'}`,
+      `${t.a4Sec5Title}:`,
+      `• Documents: ${selectedDocTypes.join(', ') || '---'}`,
+      `• Voice Recording: ${audioUrl ? `Yes (${formatDuration(recordingSeconds)})` : 'No'}`,
+      `• Captured Photos: ${capturedImages.length > 0 ? `${capturedImages.length} (${capturedImages.map((i) => i.name).join(', ')})` : 'No'}`,
+      `• Attached Files: ${attachedDocs.length > 0 ? attachedDocs.map((d) => d.name).join(', ') : 'No'}`,
+      `• Reference Link: ${referenceLink || '---'}`,
       `--------------------------------------------------`,
-      `🌐 Hệ sinh thái Duy Anh Digital Lab: https://duy-anh-digital-lab.vercel.app`,
-      `📧 Email nhận yêu cầu: anhpob@gmail.com | 💬 Zalo: +84 908 095693`
+      `🌐 Portfolio: https://duy-anh-digital-lab.vercel.app | https://ungdung.vercel.app`,
+      `📧 Email: anhpob@gmail.com | 💬 Zalo: +84 908 095693`
     ];
     return lines.join('\n');
   };
@@ -668,10 +540,10 @@ export default function App() {
 
       pdf.addImage(imgData, 'JPEG', xOffset, yOffset, renderW, renderH);
 
-      const safeName = (companyName || contactName || projectName || 'KhachHang')
+      const safeName = (companyName || contactName || projectName || 'Brief')
         .replace(/[^a-zA-Z0-9-_]/g, '-')
         .slice(0, 24);
-      const fileName = `Phieu-Yeu-Cau-WebApp-${safeName}.pdf`;
+      const fileName = `WebApp-Brief-${safeName}-${lang.toUpperCase()}.pdf`;
       const blob = pdf.output('blob');
       return { blob, fileName };
     } catch (error) {
@@ -691,7 +563,7 @@ export default function App() {
       a.download = result.fileName;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Đã tải xuống File PDF chuẩn 1 trang A4!');
+      showToast('📄 PDF (1-Page A4) downloaded!');
     } else {
       window.print();
     }
@@ -705,11 +577,11 @@ export default function App() {
     if (!audioUrl) return;
     const a = document.createElement('a');
     a.href = audioUrl;
-    a.download = `Ghi-am-yeu-cau-WebApp-${Date.now().toString().slice(-4)}.webm`;
+    a.download = `Voice-Brief-${Date.now().toString().slice(-4)}.webm`;
     a.click();
   };
 
-  // Native Share (Mobile / iPad / Modern Browsers) - shares PDF + Audio + Photos directly to Zalo/Email!
+  // Native Share (Mobile / iPad / Modern Browsers)
   const handleNativeShareWithFiles = async () => {
     const text = buildFormattedBriefText();
     const filesToShare: File[] = [];
@@ -719,9 +591,7 @@ export default function App() {
       filesToShare.push(new File([pdfRes.blob], pdfRes.fileName, { type: 'application/pdf' }));
     }
     if (audioBlob) {
-      filesToShare.push(
-        new File([audioBlob], 'Ghi-am-yeu-cau.webm', { type: 'audio/webm' })
-      );
+      filesToShare.push(new File([audioBlob], 'Voice-Brief.webm', { type: 'audio/webm' }));
     }
     capturedImages.forEach((img) => {
       if (img.file) filesToShare.push(img.file);
@@ -735,24 +605,24 @@ export default function App() {
       try {
         if (filesToShare.length > 0 && nav.canShare && nav.canShare({ files: filesToShare })) {
           await nav.share({
-            title: `Yêu cầu thiết kế Web App - ${companyName || contactName || 'Duy Anh Digital Lab'}`,
+            title: `Web App Brief - ${companyName || contactName || 'Duy Anh Digital Lab'}`,
             text,
             files: filesToShare
           });
           return;
         } else {
           await nav.share({
-            title: `Yêu cầu thiết kế Web App - ${companyName || contactName || 'Duy Anh Digital Lab'}`,
+            title: `Web App Brief - ${companyName || contactName || 'Duy Anh Digital Lab'}`,
             text
           });
           return;
         }
       } catch {
-        // User cancelled or fallback needed
+        // Fallback
       }
     }
     await navigator.clipboard.writeText(text);
-    showToast('Đã sao chép toàn bộ nội dung yêu cầu!');
+    showToast('✓ Copied to clipboard!');
   };
 
   // Trigger Email / Zalo Submission Flow
@@ -761,7 +631,7 @@ export default function App() {
     try {
       await navigator.clipboard.writeText(summaryText);
     } catch {
-      // Ignore clipboard permission issue
+      // Ignore
     }
 
     setSendModal({
@@ -772,28 +642,32 @@ export default function App() {
     });
 
     if (channel === 'email') {
-      // Attempt instant background submission to anhpob@gmail.com via FormSubmit AJAX
       try {
         const formData = new FormData();
-        formData.append('_subject', `[Yêu Cầu Thiết Kế Web App] ${companyName || contactName || projectName || 'Khách hàng mới'}`);
+        formData.append(
+          '_subject',
+          `[Web App Brief - ${lang.toUpperCase()}] ${companyName || contactName || projectName || 'New Client'}`
+        );
         formData.append('_template', 'table');
         formData.append('_captcha', 'false');
-        formData.append('Đơn vị / Cá nhân', companyName || 'Chưa điền');
-        formData.append('Người liên hệ', contactName || 'Chưa điền');
-        formData.append('SĐT / Zalo', contactPhone || 'Chưa điền');
-        formData.append('Email khách', contactEmail || 'Chưa điền');
-        formData.append('Tên Web App dự kiến', projectName || 'Chưa điền');
-        formData.append('Tiến độ', timeline);
-        formData.append('Khó khăn hiện tại', selectedPainPoints.join(', '));
-        formData.append('Mục tiêu kỳ vọng', selectedGoals.join(', '));
-        formData.append('Ý tưởng & Yêu cầu riêng', customNote || 'Xem đính kèm');
-        formData.append('Kỹ thuật & Nền tảng', `${selectedInfra.join(', ')} | ${selectedScale.join(', ')}`);
-        formData.append('Phong cách thiết kế', selectedStyle);
-        formData.append('Link tham khảo', referenceLink || 'Không');
-        formData.append('Bản tóm tắt đầy đủ', summaryText);
+        formData.append('Language', currentLangMeta.fullName);
+        formData.append('Company / Org', companyName || '---');
+        formData.append('Contact Person', contactName || '---');
+        formData.append('Phone / Zalo', contactPhone || '---');
+        formData.append('Email', contactEmail || '---');
+        formData.append('Project Name', projectName || '---');
+        formData.append('Timeline', selectedTimeline);
+        formData.append('Pain Points', selectedPainPoints.join(', '));
+        formData.append('Expected Goals', selectedGoals.join(', '));
+        formData.append('Custom Idea', customNote || '---');
+        formData.append('Tech & Scale', `${selectedInfra.join(', ')} | ${selectedScale.join(', ')}`);
+        formData.append('Target App Languages', selectedAppLangs.join(', '));
+        formData.append('UI Style', selectedStyle);
+        formData.append('Reference Link', referenceLink || '---');
+        formData.append('Full Summary', summaryText);
 
         if (audioBlob) {
-          formData.append('attachment_audio', audioBlob, 'Ghi-am-yeu-cau.webm');
+          formData.append('attachment_audio', audioBlob, 'Voice-Brief.webm');
         }
         if (capturedImages[0]?.file) {
           formData.append('attachment_photo', capturedImages[0].file, capturedImages[0].name);
@@ -821,7 +695,7 @@ export default function App() {
 
   const openMailClient = () => {
     const subject = encodeURIComponent(
-      `[Yêu Cầu Thiết Kế Web App] ${companyName || contactName || projectName || 'Khách hàng'} - ${todayStr}`
+      `[Web App Brief] ${companyName || contactName || projectName || 'Client'} - ${todayStr}`
     );
     const body = encodeURIComponent(buildFormattedBriefText());
     window.location.href = `mailto:anhpob@gmail.com?subject=${subject}&body=${body}`;
@@ -829,7 +703,7 @@ export default function App() {
 
   const openGmailWeb = () => {
     const subject = encodeURIComponent(
-      `[Yêu Cầu Thiết Kế Web App] ${companyName || contactName || projectName || 'Khách hàng'} - ${todayStr}`
+      `[Web App Brief] ${companyName || contactName || projectName || 'Client'} - ${todayStr}`
     );
     const body = encodeURIComponent(buildFormattedBriefText());
     window.open(
@@ -842,7 +716,7 @@ export default function App() {
     const text = buildFormattedBriefText();
     try {
       await navigator.clipboard.writeText(text);
-      showToast('Đã copy nội dung! Hãy nhấn Dán (Ctrl+V) vào khung chat Zalo.');
+      showToast('✓ Copied! Paste (Ctrl+V) into Zalo chat.');
     } catch {
       // Ignore
     }
@@ -862,49 +736,121 @@ export default function App() {
       {/* ==================== INTERACTIVE SCREEN VIEW (FITS 1 SCREEN ON DESKTOP) ==================== */}
       <div className="no-print flex-1 flex flex-col lg:overflow-hidden">
         {/* TOP HEADER BAR */}
-        <header className="shrink-0 bg-[#0C1B2E]/95 border-b border-[#DFC89A]/20 px-3 sm:px-5 py-2">
-          <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2">
-            {/* Brand & Title */}
-            <div className="flex items-center gap-2.5">
-              <a
-                href="https://duy-anh-digital-lab.vercel.app"
-                target="_blank"
-                rel="noreferrer"
-                className="group flex items-center gap-2.5"
-                title="Truy cập Hệ sinh thái Duy Anh Digital Lab"
-              >
-                <img
-                  src="/logo-duyanhlab.jpg"
-                  alt="Duy Anh Digital Lab"
-                  className="h-9 sm:h-10 w-auto rounded-lg border border-[#DFC89A]/40 object-cover shadow-md group-hover:border-[#DFC89A] transition"
-                />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-extrabold tracking-wider text-[#DFC89A]">
-                      DUY ANH LAB • digital
-                    </span>
-                    <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#DFC89A]/15 text-[#DFC89A] border border-[#DFC89A]/30">
-                      <Sparkles className="w-2.5 h-2.5" /> 1-Page Smart Brief
-                    </span>
+        <header className="shrink-0 bg-[#0C1B2E]/95 border-b border-[#DFC89A]/20 px-3 sm:px-5 py-1.5">
+          <div className="max-w-[1600px] mx-auto flex flex-col gap-1.5">
+            {/* Row 1: Brand + 5-Language Switcher + Action Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {/* Brand & Title */}
+              <div className="flex items-center gap-2.5">
+                <a
+                  href="https://duy-anh-digital-lab.vercel.app"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group flex items-center gap-2.5"
+                  title="Duy Anh Digital Lab"
+                >
+                  <img
+                    src="/logo-duyanhlab.jpg"
+                    alt="Duy Anh Digital Lab"
+                    className="h-9 w-auto rounded-lg border border-[#DFC89A]/40 object-cover shadow-md group-hover:border-[#DFC89A] transition"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs sm:text-sm font-extrabold tracking-wider text-[#DFC89A]">
+                        DUY ANH LAB • digital
+                      </span>
+                      <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#DFC89A]/15 text-[#DFC89A] border border-[#DFC89A]/30">
+                        <Sparkles className="w-2.5 h-2.5" /> {t.headerBadge}
+                      </span>
+                    </div>
+                    <h1 className="text-xs sm:text-[15px] font-bold text-white leading-tight">
+                      {t.headerTitle}
+                    </h1>
                   </div>
-                  <h1 className="text-xs sm:text-base font-bold text-white leading-tight">
-                    PHIẾU YÊU CẦU THIẾT KẾ WEB &amp; ỨNG DỤNG
-                  </h1>
-                </div>
-              </a>
+                </a>
+              </div>
+
+              {/* 5-Language Switcher (Việt, Anh, Hoa, Nhật, Hàn) */}
+              <div className="flex items-center gap-1 bg-[#07111E] border border-[#DFC89A]/30 rounded-full px-2 py-1 shadow-inner">
+                <Languages className="w-3.5 h-3.5 text-[#DFC89A] mr-0.5 hidden sm:inline" />
+                <span className="text-[10px] text-slate-400 font-medium mr-1 hidden xl:inline">
+                  {t.uiLangLabel}
+                </span>
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <button
+                    key={l.code}
+                    type="button"
+                    onClick={() => handleSwitchLanguage(l.code)}
+                    className={`text-[11px] px-2 py-0.5 rounded-full transition flex items-center gap-1 ${
+                      lang === l.code
+                        ? 'bg-[#DFC89A] text-[#07111E] font-extrabold shadow'
+                        : 'text-slate-300 hover:text-[#DFC89A] hover:bg-slate-800/70'
+                    }`}
+                    title={l.fullName}
+                  >
+                    <span>{l.flag}</span>
+                    <span>{l.shortLabel}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Quick Action Buttons */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowA4Preview(true)}
+                  className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-[#DFC89A] border border-[#DFC89A]/30 flex items-center gap-1.5 transition"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t.previewA4Btn}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrintA4}
+                  className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-600 flex items-center gap-1.5 transition"
+                >
+                  <Printer className="w-3.5 h-3.5 text-[#DFC89A]" />
+                  <span>{t.printA4Btn}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
+                  className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-[#DFC89A]/20 hover:bg-[#DFC89A]/30 text-[#DFC89A] border border-[#DFC89A]/50 flex items-center gap-1.5 transition"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>{isGeneratingPdf ? t.generatingPdf : t.downloadPdfBtn}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenSendChannel('email')}
+                  className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#DFC89A] to-[#C9AD76] text-[#07111E] hover:brightness-110 flex items-center gap-1.5 shadow-md transition"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>{t.sendEmailBtn}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenSendChannel('zalo')}
+                  className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-1.5 shadow-md transition"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>{t.sendZaloBtn}</span>
+                </button>
+              </div>
             </div>
 
-            {/* 1-Click Templates Bar */}
-            <div className="flex items-center gap-1 overflow-x-auto max-w-full py-0.5 thin-scroll">
-              <span className="text-[11px] text-slate-400 font-medium mr-1 shrink-0 hidden xl:inline">
-                Mẫu chọn nhanh:
+            {/* Row 2: 1-Click Templates Bar */}
+            <div className="flex items-center gap-1 overflow-x-auto max-w-full py-0.5 thin-scroll border-t border-slate-800/80 pt-1">
+              <span className="text-[11px] text-[#DFC89A] font-semibold mr-1 shrink-0">
+                {t.quickPresetLabel}
               </span>
-              {QUICK_PRESETS.map((preset) => (
+              {t.presets.map((preset) => (
                 <button
                   key={preset.id}
                   type="button"
                   onClick={() => applyPreset(preset)}
-                  className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition shrink-0 ${
+                  className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border transition shrink-0 ${
                     activePreset === preset.id
                       ? 'bg-[#DFC89A] text-[#07111E] border-[#DFC89A] font-bold shadow'
                       : 'bg-[#132640]/80 text-slate-200 border-slate-700 hover:border-[#DFC89A]/60 hover:text-[#DFC89A]'
@@ -916,155 +862,105 @@ export default function App() {
               <button
                 type="button"
                 onClick={resetForm}
-                title="Làm mới form"
-                className="text-[11px] text-slate-400 hover:text-rose-300 px-2 py-1 rounded-full border border-slate-800 hover:border-rose-400/40 flex items-center gap-1 shrink-0"
+                className="text-[11px] text-slate-400 hover:text-rose-300 px-2 py-0.5 rounded-full border border-slate-800 hover:border-rose-400/40 flex items-center gap-1 shrink-0 ml-auto"
               >
                 <RotateCcw className="w-3 h-3" />
-                <span className="hidden sm:inline">Làm mới</span>
-              </button>
-            </div>
-
-            {/* Quick Action Buttons */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowA4Preview(true)}
-                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-[#DFC89A] border border-[#DFC89A]/30 flex items-center gap-1.5 transition"
-                title="Xem trước trang in A4"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Xem trang A4</span>
-              </button>
-              <button
-                type="button"
-                onClick={handlePrintA4}
-                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-600 flex items-center gap-1.5 transition"
-                title="In ra đúng 1 trang giấy A4"
-              >
-                <Printer className="w-3.5 h-3.5 text-[#DFC89A]" />
-                <span>In A4</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={isGeneratingPdf}
-                className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-[#DFC89A]/20 hover:bg-[#DFC89A]/30 text-[#DFC89A] border border-[#DFC89A]/50 flex items-center gap-1.5 transition"
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                <span>{isGeneratingPdf ? 'Đang tạo...' : 'Tải PDF'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOpenSendChannel('email')}
-                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#DFC89A] to-[#C9AD76] text-[#07111E] hover:brightness-110 flex items-center gap-1.5 shadow-md transition"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Gửi Email</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOpenSendChannel('zalo')}
-                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-1.5 shadow-md transition"
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                <span>Gửi Zalo</span>
+                <span>{t.resetBtn}</span>
               </button>
             </div>
           </div>
         </header>
 
         {/* MAIN 3-COLUMN BENTO GRID (STRICTLY 1 SCREEN ON DESKTOP) */}
-        <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-5 py-2.5 grid grid-cols-1 lg:grid-cols-12 gap-2.5 lg:overflow-hidden">
+        <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-5 py-2 grid grid-cols-1 lg:grid-cols-12 gap-2.5 lg:overflow-hidden">
           {/* ==================== COLUMN 1: THÔNG TIN CHUNG & BÀI TOÁN (4 COLS) ==================== */}
-          <div className="lg:col-span-4 flex flex-col gap-2.5 lg:overflow-y-auto thin-scroll pr-0.5">
+          <div className="lg:col-span-4 flex flex-col gap-2 lg:overflow-y-auto thin-scroll pr-0.5">
             {/* Section 1: Thông tin chung */}
-            <section className="bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-3 shadow-lg">
-              <div className="flex items-center justify-between mb-2">
+            <section className="bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-2.5 shadow-lg">
+              <div className="flex items-center justify-between mb-1.5">
                 <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
                   <Briefcase className="w-4 h-4" />
-                  1. Thông tin Liên hệ &amp; Dự án
+                  {t.sec1Title}
                 </h2>
                 <span className="text-[10px] text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
-                  Điền cực ngắn
+                  {t.sec1Badge}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 <div>
                   <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    Tên Doanh nghiệp / Tổ chức
+                    {t.companyLabel}
                   </label>
                   <input
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="VD: Công ty ABC / Cá nhân..."
-                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none transition"
+                    placeholder={t.companyPlaceholder}
+                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    Người đại diện / Liên hệ
+                    {t.contactLabel}
                   </label>
                   <input
                     type="text"
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
-                    placeholder="VD: Anh Minh / Chị Lan..."
-                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none transition"
+                    placeholder={t.contactPlaceholder}
+                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] text-[#DFC89A] mb-0.5 font-semibold">
-                    SĐT / Zalo nhận phản hồi *
+                    {t.phoneLabel}
                   </label>
                   <input
                     type="tel"
                     value={contactPhone}
                     onChange={(e) => setContactPhone(e.target.value)}
-                    placeholder="VD: 0908 xxx xxx"
-                    className="w-full bg-[#07111E] border border-[#DFC89A]/50 focus:border-[#DFC89A] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none transition"
+                    placeholder={t.phonePlaceholder}
+                    className="w-full bg-[#07111E] border border-[#DFC89A]/50 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    Email (Nếu có)
+                    {t.emailLabel}
                   </label>
                   <input
                     type="email"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="VD: ten@congty.com"
-                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none transition"
+                    placeholder={t.emailPlaceholder}
+                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
                   />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    Tên Web App dự kiến / Lĩnh vực hoạt động
+                    {t.projectLabel}
                   </label>
                   <input
                     type="text"
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="VD: App Quản lý Hợp đồng, Báo cáo Thuế HKD, Trợ lý AI Mỹ phẩm..."
-                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none transition"
+                    placeholder={t.projectPlaceholder}
+                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
                   />
                 </div>
               </div>
 
               {/* Tiến độ kỳ vọng */}
-              <div className="mt-2">
-                <span className="block text-[11px] text-slate-400 mb-1">
-                  Tiến độ &amp; Phương án triển khai mong muốn:
-                </span>
+              <div className="mt-1.5">
+                <span className="block text-[11px] text-slate-400 mb-1">{t.timelineLabel}</span>
                 <div className="grid grid-cols-2 gap-1">
-                  {TIMELINE_OPTIONS.map((item) => (
+                  {t.timelineOptions.map((item, idx) => (
                     <button
-                      key={item}
+                      key={idx}
                       type="button"
-                      onClick={() => setTimeline(item)}
+                      onClick={() => setTimelineIdx(idx)}
                       className={`text-[11px] px-2 py-1 rounded-md border text-left truncate transition ${
-                        timeline === item
+                        timelineIdx === idx
                           ? 'bg-[#DFC89A]/20 border-[#DFC89A] text-[#DFC89A] font-semibold'
                           : 'bg-[#07111E]/70 border-slate-800 text-slate-300 hover:border-slate-600'
                       }`}
@@ -1077,29 +973,29 @@ export default function App() {
             </section>
 
             {/* Section 2: Hiện trạng & Bài toán cần giải quyết */}
-            <section className="flex-1 bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-3 shadow-lg flex flex-col justify-between">
+            <section className="flex-1 bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-2.5 shadow-lg flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1">
                   <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
                     <Sparkles className="w-4 h-4" />
-                    2. Hiện trạng &amp; Mục tiêu Kỳ vọng
+                    {t.sec2Title}
                   </h2>
-                  <span className="text-[10px] text-slate-400">Chạm để chọn</span>
+                  <span className="text-[10px] text-slate-400">{t.sec2Badge}</span>
                 </div>
 
                 {/* Pain Points */}
-                <div className="mb-2">
+                <div className="mb-1.5">
                   <p className="text-[11px] text-slate-300 font-medium mb-1">
-                    Khó khăn hiện tại cần giải quyết (Pain points):
+                    {t.painPointsLabel}
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {PAIN_POINT_OPTIONS.map((item) => {
-                      const active = selectedPainPoints.includes(item);
+                    {t.painPointsOptions.map((item, idx) => {
+                      const active = painPointsIdx.includes(idx);
                       return (
                         <button
-                          key={item}
+                          key={idx}
                           type="button"
-                          onClick={() => toggleItem(selectedPainPoints, setSelectedPainPoints, item)}
+                          onClick={() => toggleIndex(painPointsIdx, setPainPointsIdx, idx)}
                           className={`text-[11px] px-2 py-0.5 rounded-md border transition flex items-center gap-1 ${
                             active
                               ? 'bg-amber-500/20 border-[#DFC89A] text-[#DFC89A] font-semibold'
@@ -1115,18 +1011,16 @@ export default function App() {
                 </div>
 
                 {/* Goals */}
-                <div className="mb-2">
-                  <p className="text-[11px] text-slate-300 font-medium mb-1">
-                    Mục tiêu kỳ vọng lớn nhất khi làm Web App:
-                  </p>
+                <div className="mb-1.5">
+                  <p className="text-[11px] text-slate-300 font-medium mb-1">{t.goalsLabel}</p>
                   <div className="flex flex-wrap gap-1">
-                    {GOAL_OPTIONS.map((item) => {
-                      const active = selectedGoals.includes(item);
+                    {t.goalsOptions.map((item, idx) => {
+                      const active = goalsIdx.includes(idx);
                       return (
                         <button
-                          key={item}
+                          key={idx}
                           type="button"
-                          onClick={() => toggleItem(selectedGoals, setSelectedGoals, item)}
+                          onClick={() => toggleIndex(goalsIdx, setGoalsIdx, idx)}
                           className={`text-[11px] px-2 py-0.5 rounded-md border transition flex items-center gap-1 ${
                             active
                               ? 'bg-emerald-500/20 border-emerald-400/70 text-emerald-200 font-semibold'
@@ -1146,7 +1040,7 @@ export default function App() {
               <div className="mt-1">
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-[11px] text-[#DFC89A] font-semibold">
-                    Ý tưởng cốt lõi / Luồng tính năng riêng (Must-have):
+                    {t.customNoteLabel}
                   </label>
                   <button
                     type="button"
@@ -1156,48 +1050,45 @@ export default function App() {
                         ? 'bg-rose-500 text-white border-rose-400 animate-pulse'
                         : 'bg-[#132640] text-[#DFC89A] border-[#DFC89A]/40 hover:bg-[#DFC89A]/20'
                     }`}
-                    title="Nói bằng giọng nói để tự động điền chữ Tiếng Việt"
                   >
                     <Mic className="w-3 h-3" />
-                    <span>{isDictating ? 'Đang nghe bạn nói...' : 'Đọc thành chữ'}</span>
+                    <span>{isDictating ? t.dictatingBtn : t.dictateBtn}</span>
                   </button>
                 </div>
                 <textarea
                   rows={2}
                   value={customNote}
                   onChange={(e) => setCustomNote(e.target.value)}
-                  placeholder="Gõ ngắn gọn 1-2 câu, hoặc bấm 'Đọc thành chữ' / 'Ghi âm' ở cột bên phải..."
-                  className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none resize-none transition"
+                  placeholder={t.customNotePlaceholder}
+                  className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none resize-none transition"
                 />
               </div>
             </section>
           </div>
 
-          {/* ==================== COLUMN 2: KỸ THUẬT, GIAO DIỆN & PHÂN QUYỀN (4 COLS) ==================== */}
-          <div className="lg:col-span-4 flex flex-col gap-2.5 lg:overflow-y-auto thin-scroll pr-0.5">
-            {/* Section 3: Yêu cầu kỹ thuật & Giao diện */}
-            <section className="bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-3 shadow-lg">
-              <div className="flex items-center justify-between mb-1.5">
+          {/* ==================== COLUMN 2: KỸ THUẬT, NGÔN NGỮ & PHÂN QUYỀN (4 COLS) ==================== */}
+          <div className="lg:col-span-4 flex flex-col gap-2 lg:overflow-y-auto thin-scroll pr-0.5">
+            {/* Section 3: Yêu cầu kỹ thuật, Ngôn ngữ & Giao diện */}
+            <section className="bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-2.5 shadow-lg">
+              <div className="flex items-center justify-between mb-1">
                 <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
                   <Layers className="w-4 h-4" />
-                  3. Yêu cầu Kỹ thuật &amp; Giao diện
+                  {t.sec3Title}
                 </h2>
-                <span className="text-[10px] text-slate-400">Tương thích mọi thiết bị</span>
+                <span className="text-[10px] text-slate-400">{t.sec3Badge}</span>
               </div>
 
               {/* Hạ tầng & Dữ liệu */}
-              <div className="mb-2">
-                <p className="text-[11px] text-slate-300 font-medium mb-1">
-                  Hạ tầng, Dữ liệu &amp; Tiện ích:
-                </p>
+              <div className="mb-1.5">
+                <p className="text-[11px] text-slate-300 font-medium mb-1">{t.infraLabel}</p>
                 <div className="flex flex-wrap gap-1">
-                  {INFRA_OPTIONS.map((item) => {
-                    const active = selectedInfra.includes(item);
+                  {t.infraOptions.map((item, idx) => {
+                    const active = infraIdx.includes(idx);
                     return (
                       <button
-                        key={item}
+                        key={idx}
                         type="button"
-                        onClick={() => toggleItem(selectedInfra, setSelectedInfra, item)}
+                        onClick={() => toggleIndex(infraIdx, setInfraIdx, idx)}
                         className={`text-[11px] px-2 py-0.5 rounded-md border transition ${
                           active
                             ? 'bg-[#DFC89A]/20 border-[#DFC89A] text-[#DFC89A] font-semibold'
@@ -1213,18 +1104,16 @@ export default function App() {
               </div>
 
               {/* Quy mô & Nền tảng */}
-              <div className="mb-2">
-                <p className="text-[11px] text-slate-300 font-medium mb-1">
-                  Quy mô &amp; Nền tảng sử dụng:
-                </p>
+              <div className="mb-1.5">
+                <p className="text-[11px] text-slate-300 font-medium mb-1">{t.scaleLabel}</p>
                 <div className="flex flex-wrap gap-1">
-                  {SCALE_OPTIONS.map((item) => {
-                    const active = selectedScale.includes(item);
+                  {t.scaleOptions.map((item, idx) => {
+                    const active = scaleIdx.includes(idx);
                     return (
                       <button
-                        key={item}
+                        key={idx}
                         type="button"
-                        onClick={() => toggleItem(selectedScale, setSelectedScale, item)}
+                        onClick={() => toggleIndex(scaleIdx, setScaleIdx, idx)}
                         className={`text-[11px] px-2 py-0.5 rounded-md border transition ${
                           active
                             ? 'bg-sky-500/20 border-sky-400/70 text-sky-200 font-semibold'
@@ -1239,151 +1128,170 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Bảo mật & Tiêu chuẩn */}
-              <div className="mb-2">
-                <p className="text-[11px] text-slate-300 font-medium mb-1 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#DFC89A]" />
-                  Bảo mật &amp; Tiêu chuẩn:
+              {/* NGÔN NGỮ LỰA CHỌN CHO WEB APP (VIỆT, ANH, HOA, NHẬT, HÀN) */}
+              <div className="mb-1.5 p-2 rounded-lg bg-[#07111E]/90 border border-[#DFC89A]/40">
+                <p className="text-[11px] text-[#DFC89A] font-bold mb-1 flex items-center gap-1">
+                  <Languages className="w-3.5 h-3.5" />
+                  {t.appLangLabel}
                 </p>
                 <div className="flex flex-wrap gap-1">
-                  {SECURITY_OPTIONS.map((item) => {
-                    const active = selectedSecurity.includes(item);
+                  {appLangOptions.map((label, idx) => {
+                    const active = selectedAppLangsIdx.includes(idx);
                     return (
                       <button
-                        key={item}
+                        key={idx}
                         type="button"
-                        onClick={() => toggleItem(selectedSecurity, setSelectedSecurity, item)}
+                        onClick={() =>
+                          toggleIndex(selectedAppLangsIdx, setSelectedAppLangsIdx, idx)
+                        }
                         className={`text-[11px] px-2 py-0.5 rounded-md border transition ${
                           active
-                            ? 'bg-purple-500/20 border-purple-400/70 text-purple-200 font-semibold'
-                            : 'bg-[#07111E]/70 border-slate-800 text-slate-300 hover:border-slate-600'
+                            ? 'bg-[#DFC89A] text-[#07111E] border-[#DFC89A] font-extrabold shadow-sm'
+                            : 'bg-[#0C1B2E] border-slate-700 text-slate-300 hover:border-[#DFC89A]/60'
                         }`}
                       >
                         {active ? '✓ ' : '+ '}
-                        {item}
+                        {label}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Phong cách thiết kế & Ngôn ngữ */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
+              {/* Bảo mật & Phong cách thiết kế */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 border-t border-slate-800/80">
                 <div>
-                  <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    Phong cách giao diện:
+                  <p className="text-[11px] text-slate-300 font-medium mb-1 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#DFC89A]" />
+                    {t.securityLabel}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {t.securityOptions.map((item, idx) => {
+                      const active = securityIdx.includes(idx);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => toggleIndex(securityIdx, setSecurityIdx, idx)}
+                          className={`text-[10px] px-1.5 py-0.5 rounded border transition ${
+                            active
+                              ? 'bg-purple-500/20 border-purple-400/70 text-purple-200 font-semibold'
+                              : 'bg-[#07111E]/70 border-slate-800 text-slate-400 hover:border-slate-600'
+                          }`}
+                        >
+                          {active ? '✓ ' : '+ '}
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-300 mb-1 font-medium">
+                    {t.styleLabel}
                   </label>
                   <select
-                    value={selectedStyle}
-                    onChange={(e) => setSelectedStyle(e.target.value)}
-                    className="w-full bg-[#07111E] border border-slate-700 rounded-lg px-2 py-1 text-xs text-[#DFC89A] font-medium outline-none"
+                    value={styleIdx}
+                    onChange={(e) => setStyleIdx(Number(e.target.value))}
+                    className="w-full bg-[#07111E] border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-[#DFC89A] font-semibold outline-none"
                   >
-                    {STYLE_OPTIONS.map((st) => (
-                      <option key={st} value={st}>
+                    {t.styleOptions.map((st, idx) => (
+                      <option key={idx} value={idx}>
                         {st}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    Ngôn ngữ hiển thị:
-                  </label>
-                  <input
-                    type="text"
-                    value={languageNote}
-                    onChange={(e) => setLanguageNote(e.target.value)}
-                    placeholder="VD: Việt, Anh, Hàn, Trung..."
-                    className="w-full bg-[#07111E] border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white outline-none"
-                  />
-                </div>
               </div>
             </section>
 
             {/* Section 4: Phân quyền người dùng (Roles & Permissions) */}
-            <section className="flex-1 bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-3 shadow-lg flex flex-col justify-between">
+            <section className="flex-1 bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-2.5 shadow-lg flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1">
                   <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
                     <Users className="w-4 h-4" />
-                    4. Phân quyền Người dùng (Roles)
+                    {t.sec4Title}
                   </h2>
-                  <span className="text-[10px] text-slate-400">Tích chọn &amp; sửa nhanh</span>
+                  <span className="text-[10px] text-slate-400">{t.sec4Badge}</span>
                 </div>
 
-                <div className="space-y-1.5">
-                  {roles.map((role, idx) => (
-                    <div
-                      key={role.id}
-                      className={`p-2 rounded-lg border transition ${
-                        role.enabled
-                          ? 'bg-[#07111E]/90 border-slate-700/90'
-                          : 'bg-[#07111E]/30 border-slate-800/50 opacity-55'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-white">
-                          <input
-                            type="checkbox"
-                            checked={role.enabled}
-                            onChange={(e) => {
-                              const next = [...roles];
-                              next[idx].enabled = e.target.checked;
-                              setRoles(next);
-                            }}
-                            className="accent-[#DFC89A] w-3.5 h-3.5 rounded"
-                          />
-                          <span>{role.name}</span>
-                        </label>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400">SL:</span>
-                          <input
-                            type="text"
-                            value={role.count}
-                            onChange={(e) => {
-                              const next = [...roles];
-                              next[idx].count = e.target.value;
-                              setRoles(next);
-                            }}
-                            className="w-20 bg-[#0C1B2E] border border-slate-700 rounded px-1.5 py-0.5 text-[11px] text-[#DFC89A] text-center outline-none"
-                            placeholder="Số user"
-                          />
+                <div className="space-y-1">
+                  {roleStates.map((role, idx) => {
+                    const trans = t.defaultRoles[idx];
+                    const displayPerm = role.customPermissions ?? trans?.permissions ?? '';
+                    return (
+                      <div
+                        key={role.id}
+                        className={`p-1.5 rounded-lg border transition ${
+                          role.enabled
+                            ? 'bg-[#07111E]/90 border-slate-700/90'
+                            : 'bg-[#07111E]/30 border-slate-800/50 opacity-55'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-white">
+                            <input
+                              type="checkbox"
+                              checked={role.enabled}
+                              onChange={(e) => {
+                                const next = [...roleStates];
+                                next[idx].enabled = e.target.checked;
+                                setRoleStates(next);
+                              }}
+                              className="accent-[#DFC89A] w-3.5 h-3.5 rounded"
+                            />
+                            <span>{trans?.name}</span>
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-slate-400">{t.roleQtyLabel}</span>
+                            <input
+                              type="text"
+                              value={role.count}
+                              onChange={(e) => {
+                                const next = [...roleStates];
+                                next[idx].count = e.target.value;
+                                setRoleStates(next);
+                              }}
+                              className="w-20 bg-[#0C1B2E] border border-slate-700 rounded px-1.5 py-0.5 text-[11px] text-[#DFC89A] text-center outline-none"
+                            />
+                          </div>
                         </div>
+                        <input
+                          type="text"
+                          value={displayPerm}
+                          onChange={(e) => {
+                            const next = [...roleStates];
+                            next[idx].customPermissions = e.target.value;
+                            setRoleStates(next);
+                          }}
+                          className="w-full bg-transparent border-b border-slate-800 focus:border-[#DFC89A] text-[11px] text-slate-300 outline-none py-0.5"
+                          placeholder={t.rolePermPlaceholder}
+                        />
                       </div>
-                      <input
-                        type="text"
-                        value={role.permissions}
-                        onChange={(e) => {
-                          const next = [...roles];
-                          next[idx].permissions = e.target.value;
-                          setRoles(next);
-                        }}
-                        className="w-full bg-transparent border-b border-slate-800 focus:border-[#DFC89A] text-[11px] text-slate-300 outline-none py-0.5"
-                        placeholder="Quyền hạn chính (Xem, Thêm, Sửa, Xóa, Duyệt báo cáo...)"
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </section>
           </div>
 
           {/* ==================== COLUMN 3: GHI ÂM, CHỤP ẢNH, ĐÍNH KÈM & GỬI NGAY (4 COLS) ==================== */}
-          <div className="lg:col-span-4 flex flex-col gap-2.5 lg:overflow-y-auto thin-scroll pr-0.5">
+          <div className="lg:col-span-4 flex flex-col gap-2 lg:overflow-y-auto thin-scroll pr-0.5">
             {/* Section 5: Ghi âm, Chụp ảnh & Đính kèm (Zero-Typing) */}
-            <section className="bg-[#0C1B2E]/90 border border-[#DFC89A]/30 rounded-xl p-3 shadow-lg">
-              <div className="flex items-center justify-between mb-2">
+            <section className="bg-[#0C1B2E]/90 border border-[#DFC89A]/30 rounded-xl p-2.5 shadow-lg">
+              <div className="flex items-center justify-between mb-1.5">
                 <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
                   <Mic className="w-4 h-4" />
-                  5. Ghi âm, Chụp hình &amp; Đính kèm
+                  {t.sec5Title}
                 </h2>
                 <span className="text-[10px] bg-[#DFC89A]/15 text-[#DFC89A] px-2 py-0.5 rounded-full font-semibold">
-                  Không cần gõ nhiều!
+                  {t.sec5Badge}
                 </span>
               </div>
 
               {/* 3 Big Fast Media Buttons: Voice Record | Camera Capture | Attach File */}
-              <div className="grid grid-cols-3 gap-1.5 mb-2.5">
+              <div className="grid grid-cols-3 gap-1.5 mb-2">
                 {/* Button 1: Voice Recording */}
                 {!isRecording ? (
                   <button
@@ -1395,9 +1303,9 @@ export default function App() {
                       <Mic className="w-4 h-4 text-rose-300" />
                     </div>
                     <span className="text-[11px] font-bold text-center leading-tight">
-                      Ghi âm Yêu cầu
+                      {t.recordVoiceTitle}
                     </span>
-                    <span className="text-[9px] text-rose-300/80">Nói trực tiếp</span>
+                    <span className="text-[9px] text-rose-300/80">{t.recordVoiceSub}</span>
                   </button>
                 ) : (
                   <button
@@ -1407,9 +1315,9 @@ export default function App() {
                   >
                     <Square className="w-5 h-5 fill-white" />
                     <span className="text-[11px] font-bold">
-                      Dừng ({formatDuration(recordingSeconds)})
+                      {t.stopRecordingBtn} ({formatDuration(recordingSeconds)})
                     </span>
-                    <span className="text-[9px]">Đang thu âm...</span>
+                    <span className="text-[9px]">{t.recordingSub}</span>
                   </button>
                 )}
 
@@ -1423,9 +1331,9 @@ export default function App() {
                     <Camera className="w-4 h-4 text-sky-300" />
                   </div>
                   <span className="text-[11px] font-bold text-center leading-tight">
-                    Chụp ảnh Mẫu
+                    {t.cameraTitle}
                   </span>
-                  <span className="text-[9px] text-sky-300/80">Mở Camera / Ảnh</span>
+                  <span className="text-[9px] text-sky-300/80">{t.cameraSub}</span>
                 </button>
                 <input
                   ref={cameraInputRef}
@@ -1446,9 +1354,9 @@ export default function App() {
                     <Paperclip className="w-4 h-4 text-[#DFC89A]" />
                   </div>
                   <span className="text-[11px] font-bold text-center leading-tight">
-                    Đính kèm File
+                    {t.attachTitle}
                   </span>
-                  <span className="text-[9px] text-[#DFC89A]/80">Excel, Word, Ảnh</span>
+                  <span className="text-[9px] text-[#DFC89A]/80">{t.attachSub}</span>
                 </button>
                 <input
                   ref={fileUploadRef}
@@ -1462,7 +1370,7 @@ export default function App() {
 
               {/* Audio Player if recorded */}
               {audioUrl && (
-                <div className="mb-2 p-2 rounded-lg bg-[#07111E] border border-rose-400/40 flex items-center justify-between gap-2">
+                <div className="mb-2 p-1.5 rounded-lg bg-[#07111E] border border-rose-400/40 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <Volume2 className="w-4 h-4 text-rose-400 shrink-0" />
                     <audio src={audioUrl} controls className="h-7 w-full max-w-[190px]" />
@@ -1472,9 +1380,8 @@ export default function App() {
                       type="button"
                       onClick={downloadVoiceRecording}
                       className="text-[10px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[#DFC89A] flex items-center gap-1"
-                      title="Tải file ghi âm để gửi kèm"
                     >
-                      <Download className="w-3 h-3" /> Tải file
+                      <Download className="w-3 h-3" /> {t.downloadAudioBtn}
                     </button>
                     <button
                       type="button"
@@ -1483,7 +1390,6 @@ export default function App() {
                         setAudioBlob(null);
                       }}
                       className="p-1 text-slate-400 hover:text-rose-400"
-                      title="Xóa ghi âm"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1496,21 +1402,21 @@ export default function App() {
                 <div className="mb-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[10px] text-sky-300 font-semibold flex items-center gap-1">
-                      <ImageIcon className="w-3 h-3" /> Ảnh chụp / Mẫu đính kèm ({capturedImages.length}/4 - Tự động in vào A4):
+                      <ImageIcon className="w-3 h-3" /> {t.capturedImagesLabel}
                     </span>
                     <button
                       type="button"
                       onClick={() => photoUploadRef.current?.click()}
                       className="text-[10px] text-[#DFC89A] underline"
                     >
-                      + Thêm ảnh
+                      {t.addMorePhotoBtn}
                     </button>
                   </div>
                   <div className="grid grid-cols-4 gap-1.5">
                     {capturedImages.map((img) => (
                       <div
                         key={img.id}
-                        className="relative group h-12 rounded-lg overflow-hidden border border-slate-700 bg-slate-900"
+                        className="relative group h-11 rounded-lg overflow-hidden border border-slate-700 bg-slate-900"
                       >
                         <img
                           src={img.dataUrl}
@@ -1522,7 +1428,7 @@ export default function App() {
                           onClick={() =>
                             setCapturedImages((prev) => prev.filter((i) => i.id !== img.id))
                           }
-                          className="absolute top-0.5 right-0.5 bg-slate-950/80 text-rose-400 rounded-full p-0.5 opacity-80 hover:opacity-100"
+                          className="absolute top-0.5 right-0.5 bg-slate-950/80 text-rose-400 rounded-full p-0.5"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -1542,11 +1448,11 @@ export default function App() {
 
               {/* Attached Documents List */}
               {attachedDocs.length > 0 && (
-                <div className="mb-2 space-y-1">
+                <div className="mb-1.5 space-y-1">
                   {attachedDocs.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between text-[11px] bg-[#07111E] border border-slate-800 px-2 py-1 rounded"
+                      className="flex items-center justify-between text-[11px] bg-[#07111E] border border-slate-800 px-2 py-0.5 rounded"
                     >
                       <span className="truncate flex items-center gap-1.5 text-slate-200">
                         <FileText className="w-3 h-3 text-[#DFC89A] shrink-0" />
@@ -1567,18 +1473,16 @@ export default function App() {
               )}
 
               {/* Document Mapping Checkboxes */}
-              <div className="mb-2">
-                <p className="text-[11px] text-slate-300 font-medium mb-1">
-                  Tài liệu sẵn có để ánh xạ (Mapping) quy trình &amp; dữ liệu:
-                </p>
+              <div className="mb-1.5">
+                <p className="text-[11px] text-slate-300 font-medium mb-1">{t.docTypesLabel}</p>
                 <div className="flex flex-wrap gap-1">
-                  {DOC_TYPE_OPTIONS.map((item) => {
-                    const active = selectedDocTypes.includes(item);
+                  {t.docTypesOptions.map((item, idx) => {
+                    const active = docTypesIdx.includes(idx);
                     return (
                       <button
-                        key={item}
+                        key={idx}
                         type="button"
-                        onClick={() => toggleItem(selectedDocTypes, setSelectedDocTypes, item)}
+                        onClick={() => toggleIndex(docTypesIdx, setDocTypesIdx, idx)}
                         className={`text-[10px] px-2 py-0.5 rounded border transition ${
                           active
                             ? 'bg-[#DFC89A]/20 border-[#DFC89A] text-[#DFC89A] font-semibold'
@@ -1599,28 +1503,24 @@ export default function App() {
                   type="url"
                   value={referenceLink}
                   onChange={(e) => setReferenceLink(e.target.value)}
-                  placeholder="🔗 Dán link trang web mẫu bạn thích hoặc link Google Drive / Ảnh (Có thể bấm Ctrl+V dán ảnh)..."
-                  className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none"
+                  placeholder={t.refLinkPlaceholder}
+                  className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none"
                 />
               </div>
             </section>
 
             {/* Section 6: Hộp Gửi Yêu Cầu & Xuất File 1 Trang A4 */}
-            <section className="flex-1 bg-gradient-to-br from-[#132640] via-[#0C1B2E] to-[#07111E] border border-[#DFC89A]/40 rounded-xl p-3 shadow-xl flex flex-col justify-between">
+            <section className="flex-1 bg-gradient-to-br from-[#132640] via-[#0C1B2E] to-[#07111E] border border-[#DFC89A]/40 rounded-xl p-2.5 shadow-xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-extrabold uppercase tracking-wider text-[#DFC89A]">
-                    🚀 Hoàn tất &amp; Gửi Yêu Cầu Ngay
+                    {t.sec6Title}
                   </span>
-                  <span className="text-[10px] text-emerald-300 font-medium">
-                    Phản hồi nhanh 24/7
-                  </span>
+                  <span className="text-[10px] text-emerald-300 font-medium">{t.sec6Badge}</span>
                 </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed mb-2">
-                  Sau khi chọn xong, bạn có thể <strong>In / Xuất gọn 1 trang PDF A4</strong> hoặc gửi trực tiếp kèm file ghi âm &amp; hình ảnh qua <strong>Email</strong> hoặc <strong>Zalo</strong>:
-                </p>
+                <p className="text-[11px] text-slate-300 leading-snug mb-2">{t.sec6Desc}</p>
 
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="grid grid-cols-2 gap-2 mb-1.5">
                   {/* Send Email */}
                   <button
                     type="button"
@@ -1629,7 +1529,7 @@ export default function App() {
                   >
                     <Mail className="w-4 h-4 shrink-0" />
                     <div className="text-left leading-tight">
-                      <div>Gửi Email</div>
+                      <div>{t.sendEmailBtn}</div>
                       <div className="text-[9px] font-semibold opacity-80">anhpob@gmail.com</div>
                     </div>
                   </button>
@@ -1642,7 +1542,7 @@ export default function App() {
                   >
                     <MessageCircle className="w-4 h-4 shrink-0" />
                     <div className="text-left leading-tight">
-                      <div>Gửi qua Zalo</div>
+                      <div>{t.sendZaloBtn}</div>
                       <div className="text-[9px] font-semibold opacity-85">+84 908 095693</div>
                     </div>
                   </button>
@@ -1656,7 +1556,7 @@ export default function App() {
                     className="py-1.5 px-2 rounded-lg bg-[#07111E]/90 hover:bg-slate-800 text-white border border-slate-700 text-[11px] font-semibold flex items-center justify-center gap-1 transition"
                   >
                     <Printer className="w-3.5 h-3.5 text-[#DFC89A]" />
-                    <span>In 1 Trang A4</span>
+                    <span>{t.printA4Btn}</span>
                   </button>
                   <button
                     type="button"
@@ -1665,31 +1565,30 @@ export default function App() {
                     className="py-1.5 px-2 rounded-lg bg-[#07111E]/90 hover:bg-slate-800 text-[#DFC89A] border border-[#DFC89A]/40 text-[11px] font-semibold flex items-center justify-center gap-1 transition"
                   >
                     <FileDown className="w-3.5 h-3.5" />
-                    <span>{isGeneratingPdf ? 'Đang xuất...' : 'Xuất File PDF'}</span>
+                    <span>{isGeneratingPdf ? t.generatingPdf : t.downloadPdfBtn}</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleNativeShareWithFiles}
                     className="py-1.5 px-2 rounded-lg bg-[#07111E]/90 hover:bg-slate-800 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold flex items-center justify-center gap-1 transition"
-                    title="Chia sẻ nhanh kèm File trên Điện thoại / iPad"
                   >
                     <Share2 className="w-3.5 h-3.5" />
-                    <span>Đính kèm nhanh</span>
+                    <span>{t.quickShareBtn}</span>
                   </button>
                 </div>
               </div>
 
               {/* Device Compatibility Badge */}
-              <div className="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+              <div className="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
                 <span className="flex items-center gap-1">
-                  <Smartphone className="w-3 h-3 text-[#DFC89A]" /> Điện thoại • iPad • Laptop • Máy ảnh
+                  <Smartphone className="w-3 h-3 text-[#DFC89A]" /> {t.deviceBadge}
                 </span>
                 <a
                   href="/Web_App_Brief_Form.docx"
                   download
                   className="text-[#DFC89A] hover:underline flex items-center gap-0.5"
                 >
-                  <Download className="w-3 h-3" /> Mẫu Word (.docx)
+                  <Download className="w-3 h-3" /> {t.wordTemplateBtn}
                 </a>
               </div>
             </section>
@@ -1697,16 +1596,14 @@ export default function App() {
         </main>
 
         {/* BOTTOM FOOTER: DUY ANH DIGITAL LAB (.vercel.app) INTRODUCTION */}
-        <footer className="shrink-0 bg-[#050C16] border-t border-[#DFC89A]/25 px-3 sm:px-5 py-2">
+        <footer className="shrink-0 bg-[#050C16] border-t border-[#DFC89A]/25 px-3 sm:px-5 py-1.5">
           <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
               <span className="font-extrabold text-[#DFC89A] tracking-wide flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5" />
                 DUY ANH DIGITAL LAB:
               </span>
-              <span className="text-slate-300 text-[11px]">
-                Hệ sinh thái Web App chuyên sâu &amp; Giải pháp AI thực chiến (Báo cáo thuế HKD, R&amp;D Mỹ phẩm &amp; F&amp;B, Quản lý Hợp đồng, SCM, ERP Nông nghiệp, Đào tạo &amp; Trợ lý Ngân hàng).
-              </span>
+              <span className="text-slate-300 text-[11px]">{t.footerDesc}</span>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 shrink-0">
@@ -1714,7 +1611,7 @@ export default function App() {
                 href="https://duy-anh-digital-lab.vercel.app"
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-1 rounded-full bg-[#DFC89A]/15 hover:bg-[#DFC89A]/30 text-[#DFC89A] border border-[#DFC89A]/40 font-bold text-[11px] flex items-center gap-1 transition"
+                className="px-2.5 py-0.5 rounded-full bg-[#DFC89A]/15 hover:bg-[#DFC89A]/30 text-[#DFC89A] border border-[#DFC89A]/40 font-bold text-[11px] flex items-center gap-1 transition"
               >
                 <span>🌐 duy-anh-digital-lab.vercel.app</span>
                 <ExternalLink className="w-3 h-3" />
@@ -1723,14 +1620,14 @@ export default function App() {
                 href="https://ungdung.vercel.app"
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-[11px] flex items-center gap-1 transition"
+                className="px-2.5 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-[11px] flex items-center gap-1 transition"
               >
                 <span>🚀 ungdung.vercel.app</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
               <a
                 href="mailto:anhpob@gmail.com"
-                className="text-[11px] text-slate-300 hover:text-[#DFC89A] font-medium px-1.5"
+                className="text-[11px] text-slate-300 hover:text-[#DFC89A] font-medium px-1"
               >
                 📧 anhpob@gmail.com
               </a>
@@ -1738,7 +1635,7 @@ export default function App() {
                 href="https://zalo.me/84908095693"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-sky-300 hover:text-sky-200 font-semibold px-1.5"
+                className="text-[11px] text-sky-300 hover:text-sky-200 font-semibold px-1"
               >
                 💬 Zalo: +84 908 095693
               </a>
@@ -1760,13 +1657,15 @@ export default function App() {
                 )}
                 <h3 className="font-bold text-base text-white">
                   {sendModal.channel === 'email'
-                    ? 'Gửi Phiếu Yêu Cầu đến anhpob@gmail.com'
-                    : 'Gửi Phiếu Yêu Cầu qua Zalo (+84 908 095693)'}
+                    ? 'Email: anhpob@gmail.com'
+                    : 'Zalo: +84 908 095693'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setSendModal({ open: false, channel: null, sendingCloud: false, cloudSent: false })}
+                onClick={() =>
+                  setSendModal({ open: false, channel: null, sendingCloud: false, cloudSent: false })
+                }
                 className="text-slate-400 hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
@@ -1778,16 +1677,16 @@ export default function App() {
                 <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
                   <div className="font-bold">
-                    Đã tự động sao chép toàn bộ nội dung Phiếu Yêu Cầu vào bộ nhớ tạm!
+                    Đã sao chép toàn bộ nội dung Phiếu Yêu Cầu vào bộ nhớ tạm (Clipboard)!
                   </div>
                   {sendModal.channel === 'email' && sendModal.sendingCloud && (
                     <div className="text-[11px] text-amber-300 mt-1">
-                      ⏳ Đang đồng thời gửi bản sao tự động tới hộp thư <strong>anhpob@gmail.com</strong>...
+                      ⏳ Đang gửi bản sao trực tuyến tới <strong>anhpob@gmail.com</strong>...
                     </div>
                   )}
                   {sendModal.channel === 'email' && sendModal.cloudSent && (
                     <div className="text-[11px] text-emerald-300 mt-1">
-                      ✅ Đã gửi trực tuyến thành công tới hệ thống email <strong>anhpob@gmail.com</strong>!
+                      ✅ Đã gửi trực tuyến thành công tới <strong>anhpob@gmail.com</strong>!
                     </div>
                   )}
                 </div>
@@ -1796,7 +1695,7 @@ export default function App() {
               {/* Step 1: Download PDF / Audio / Images if user wants to attach */}
               <div className="p-3 rounded-xl bg-[#07111E] border border-slate-800 space-y-2">
                 <div className="font-bold text-[#DFC89A]">
-                  Bước 1 (Tùy chọn): Tải File PDF 1 Trang A4 / Ghi âm để đính kèm
+                  1. Tải File PDF (1 Trang A4) / Ghi âm để đính kèm:
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -1806,7 +1705,7 @@ export default function App() {
                     className="px-3 py-1.5 rounded-lg bg-[#DFC89A]/20 hover:bg-[#DFC89A]/30 text-[#DFC89A] border border-[#DFC89A]/50 font-semibold flex items-center gap-1.5"
                   >
                     <FileDown className="w-3.5 h-3.5" />
-                    <span>{isGeneratingPdf ? 'Đang tạo PDF...' : 'Tải File PDF (1 Trang A4)'}</span>
+                    <span>{isGeneratingPdf ? t.generatingPdf : 'PDF (1-Page A4)'}</span>
                   </button>
                   {audioUrl && (
                     <button
@@ -1815,7 +1714,7 @@ export default function App() {
                       className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/40 font-semibold flex items-center gap-1.5"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Tải File Ghi âm (.webm)</span>
+                      <span>{t.downloadAudioBtn} (.webm)</span>
                     </button>
                   )}
                   <button
@@ -1824,7 +1723,7 @@ export default function App() {
                     className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 font-semibold flex items-center gap-1.5"
                   >
                     <Share2 className="w-3.5 h-3.5" />
-                    <span>Chia sẻ kèm File (ĐT/iPad)</span>
+                    <span>{t.quickShareBtn}</span>
                   </button>
                 </div>
               </div>
@@ -1833,8 +1732,8 @@ export default function App() {
               <div className="p-3 rounded-xl bg-[#07111E] border border-slate-800 space-y-2">
                 <div className="font-bold text-white">
                   {sendModal.channel === 'email'
-                    ? 'Bước 2: Mở ứng dụng Email (Đã điền sẵn nội dung gửi anhpob@gmail.com)'
-                    : 'Bước 2: Mở Zalo +84 908 095693 và nhấn Dán (Ctrl+V) + Đính kèm file'}
+                    ? '2. Mở ứng dụng Email (Đã điền sẵn người nhận anhpob@gmail.com):'
+                    : '2. Mở Zalo +84 908 095693 và nhấn Dán (Ctrl+V):'}
                 </div>
 
                 {sendModal.channel === 'email' ? (
@@ -1845,7 +1744,7 @@ export default function App() {
                       className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#DFC89A] to-[#C9AD76] text-[#07111E] font-extrabold flex items-center justify-center gap-2 shadow-lg"
                     >
                       <Mail className="w-4 h-4" />
-                      <span>Mở App Email Mặc Định</span>
+                      <span>Mở App Email</span>
                     </button>
                     <button
                       type="button"
@@ -1853,7 +1752,7 @@ export default function App() {
                       className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-bold flex items-center justify-center gap-2"
                     >
                       <ExternalLink className="w-4 h-4 text-[#DFC89A]" />
-                      <span>Mở Gmail trên Web</span>
+                      <span>Mở Gmail Web</span>
                     </button>
                   </div>
                 ) : (
@@ -1870,12 +1769,12 @@ export default function App() {
                       type="button"
                       onClick={async () => {
                         await navigator.clipboard.writeText(buildFormattedBriefText());
-                        showToast('Đã sao chép lại nội dung yêu cầu!');
+                        showToast('✓ Copied!');
                       }}
                       className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-bold flex items-center justify-center gap-2"
                     >
                       <Copy className="w-4 h-4 text-[#DFC89A]" />
-                      <span>Copy lại nội dung</span>
+                      <span>Copy Text</span>
                     </button>
                   </div>
                 )}
@@ -1885,10 +1784,12 @@ export default function App() {
             <div className="pt-2 border-t border-slate-800 flex justify-end">
               <button
                 type="button"
-                onClick={() => setSendModal({ open: false, channel: null, sendingCloud: false, cloudSent: false })}
+                onClick={() =>
+                  setSendModal({ open: false, channel: null, sendingCloud: false, cloudSent: false })
+                }
                 className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
               >
-                Đóng
+                {t.a4CloseBtn}
               </button>
             </div>
           </div>
@@ -1908,11 +1809,9 @@ export default function App() {
           <div className="no-print max-w-[210mm] w-full mb-3 flex flex-wrap items-center justify-between gap-2 bg-[#0C1B2E] border border-[#DFC89A]/40 px-4 py-2.5 rounded-xl shadow-xl">
             <div className="flex items-center gap-2">
               <span className="text-xs sm:text-sm font-bold text-[#DFC89A]">
-                📄 Xem trước Bản In Chuẩn 1 Trang Giấy A4
+                {t.a4PreviewBanner}
               </span>
-              <span className="text-[11px] text-slate-400 hidden sm:inline">
-                (Tự động căn vừa khít 1 trang A4 khi In hoặc Xuất PDF)
-              </span>
+              <span className="text-[11px] text-slate-400 hidden sm:inline">{t.a4PreviewSub}</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -1920,7 +1819,7 @@ export default function App() {
                 onClick={handlePrintA4}
                 className="px-3 py-1.5 rounded-lg bg-[#DFC89A] text-[#07111E] font-bold text-xs flex items-center gap-1.5"
               >
-                <Printer className="w-3.5 h-3.5" /> In ngay (1 trang A4)
+                <Printer className="w-3.5 h-3.5" /> {t.printA4Btn}
               </button>
               <button
                 type="button"
@@ -1928,14 +1827,15 @@ export default function App() {
                 disabled={isGeneratingPdf}
                 className="px-3 py-1.5 rounded-lg bg-sky-500 text-slate-950 font-bold text-xs flex items-center gap-1.5"
               >
-                <FileDown className="w-3.5 h-3.5" /> {isGeneratingPdf ? 'Đang tạo...' : 'Tải PDF'}
+                <FileDown className="w-3.5 h-3.5" />{' '}
+                {isGeneratingPdf ? t.generatingPdf : t.downloadPdfBtn}
               </button>
               <button
                 type="button"
                 onClick={() => setShowA4Preview(false)}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs font-semibold flex items-center gap-1"
               >
-                <X className="w-3.5 h-3.5" /> Đóng
+                <X className="w-3.5 h-3.5" /> {t.a4CloseBtn}
               </button>
             </div>
           </div>
@@ -1948,7 +1848,7 @@ export default function App() {
           className="w-[198mm] bg-white text-slate-900 p-[6mm] rounded shadow-2xl border border-slate-300 text-[10.5px] leading-[1.35] font-sans"
         >
           {/* A4 Header */}
-          <div className="flex items-center justify-between border-b-2 border-[#0C1B2E] pb-2 mb-2.5">
+          <div className="flex items-center justify-between border-b-2 border-[#0C1B2E] pb-2 mb-2">
             <div className="flex items-center gap-3">
               <img
                 src="/logo-duyanhlab.jpg"
@@ -1959,16 +1859,16 @@ export default function App() {
                 <div className="text-[10px] font-extrabold tracking-widest text-[#0C1B2E] uppercase">
                   DUY ANH LAB • DIGITAL — WEB APP &amp; AI SOLUTIONS
                 </div>
-                <h1 className="text-[15px] font-extrabold text-[#0C1B2E] uppercase tracking-tight">
-                  BẢNG YÊU CẦU THIẾT KẾ ỨNG DỤNG WEB (WEB APP BRIEF)
+                <h1 className="text-[14px] font-extrabold text-[#0C1B2E] uppercase tracking-tight">
+                  {t.a4MainTitle}
                 </h1>
                 <div className="text-[9.5px] text-slate-600">
-                  Tiếp nhận &amp; Tư vấn: <strong>anhpob@gmail.com</strong> | Zalo / Hotline: <strong>+84 908 095693</strong> | Ngày lập: <strong>{todayStr}</strong>
+                  {t.a4HeaderSub} | {t.a4DateLabel}: <strong>{todayStr}</strong>
                 </div>
               </div>
             </div>
             <div className="text-right text-[9.5px] bg-slate-100 border border-slate-300 rounded px-2.5 py-1.5">
-              <div className="font-bold text-[#0C1B2E]">HỆ SINH THÁI WEB APP</div>
+              <div className="font-bold text-[#0C1B2E]">{t.a4EcosystemTitle}</div>
               <div className="font-mono text-[9px] text-slate-700">duy-anh-digital-lab.vercel.app</div>
               <div className="font-mono text-[9px] text-slate-700">ungdung.vercel.app</div>
             </div>
@@ -1977,37 +1877,37 @@ export default function App() {
           {/* 1. THÔNG TIN CHUNG */}
           <div className="mb-2">
             <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              1. Thông tin chung &amp; Liên hệ
+              {t.a4Sec1Title}
             </div>
             <div className="border border-slate-300 rounded-b p-2 grid grid-cols-2 gap-x-4 gap-y-1 bg-slate-50/40">
               <div>
-                <span className="font-semibold text-slate-700">Tên Doanh nghiệp / Tổ chức: </span>
+                <span className="font-semibold text-slate-700">{t.companyLabel}: </span>
                 <span className="font-bold text-slate-950">
                   {companyName || '............................................................'}
                 </span>
               </div>
               <div>
-                <span className="font-semibold text-slate-700">Tên Web App (Dự kiến): </span>
+                <span className="font-semibold text-slate-700">{t.projectLabel}: </span>
                 <span className="font-bold text-slate-950">
                   {projectName || '............................................................'}
                 </span>
               </div>
               <div>
-                <span className="font-semibold text-slate-700">Người đại diện: </span>
+                <span className="font-semibold text-slate-700">{t.contactLabel}: </span>
                 <span className="font-bold text-slate-950">
                   {contactName || '............................................................'}
                 </span>
               </div>
               <div>
-                <span className="font-semibold text-slate-700">SĐT / Zalo / Email: </span>
+                <span className="font-semibold text-slate-700">{t.phoneLabel}: </span>
                 <span className="font-bold text-slate-950">
                   {contactPhone || '..............................'}
                   {contactEmail ? ` | ${contactEmail}` : ''}
                 </span>
               </div>
               <div className="col-span-2">
-                <span className="font-semibold text-slate-700">Tiến độ &amp; Phương án triển khai: </span>
-                <span className="font-bold text-[#0C1B2E]">{timeline}</span>
+                <span className="font-semibold text-slate-700">{t.timelineLabel} </span>
+                <span className="font-bold text-[#0C1B2E]">{selectedTimeline}</span>
               </div>
             </div>
           </div>
@@ -2015,20 +1915,22 @@ export default function App() {
           {/* 2. HIỆN TRẠNG & BÀI TOÁN CẦN GIẢI QUYẾT */}
           <div className="mb-2">
             <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              2. Hiện trạng &amp; Bài toán cần giải quyết
+              {t.a4Sec2Title}
             </div>
             <div className="border border-slate-300 rounded-b p-2 space-y-1.5">
               <div>
-                <div className="font-semibold text-slate-800 mb-0.5">
-                  • Khó khăn lớn nhất trong quy trình hiện tại (Pain points):
-                </div>
+                <div className="font-semibold text-slate-800 mb-0.5">• {t.painPointsLabel}</div>
                 <div className="grid grid-cols-3 gap-1 text-[9.5px]">
-                  {PAIN_POINT_OPTIONS.map((item) => (
-                    <div key={item} className="flex items-center gap-1">
+                  {t.painPointsOptions.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-1">
                       <span className="font-mono font-bold text-slate-900">
-                        {selectedPainPoints.includes(item) ? '[✓]' : '[ ]'}
+                        {painPointsIdx.includes(idx) ? '[✓]' : '[ ]'}
                       </span>
-                      <span className={selectedPainPoints.includes(item) ? 'font-bold text-slate-950' : 'text-slate-600'}>
+                      <span
+                        className={
+                          painPointsIdx.includes(idx) ? 'font-bold text-slate-950' : 'text-slate-600'
+                        }
+                      >
                         {item}
                       </span>
                     </div>
@@ -2037,16 +1939,18 @@ export default function App() {
               </div>
 
               <div>
-                <div className="font-semibold text-slate-800 mb-0.5">
-                  • Mục tiêu kỳ vọng lớn nhất khi làm Web App này:
-                </div>
+                <div className="font-semibold text-slate-800 mb-0.5">• {t.goalsLabel}</div>
                 <div className="grid grid-cols-3 gap-1 text-[9.5px]">
-                  {GOAL_OPTIONS.map((item) => (
-                    <div key={item} className="flex items-center gap-1">
+                  {t.goalsOptions.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-1">
                       <span className="font-mono font-bold text-slate-900">
-                        {selectedGoals.includes(item) ? '[✓]' : '[ ]'}
+                        {goalsIdx.includes(idx) ? '[✓]' : '[ ]'}
                       </span>
-                      <span className={selectedGoals.includes(item) ? 'font-bold text-slate-950' : 'text-slate-600'}>
+                      <span
+                        className={
+                          goalsIdx.includes(idx) ? 'font-bold text-slate-950' : 'text-slate-600'
+                        }
+                      >
                         {item}
                       </span>
                     </div>
@@ -2055,9 +1959,7 @@ export default function App() {
               </div>
 
               <div className="pt-1 border-t border-dashed border-slate-300">
-                <span className="font-semibold text-slate-800">
-                  • Mô tả ý tưởng cốt lõi / Luồng tính năng đặc thù (Must-have):{' '}
-                </span>
+                <span className="font-semibold text-slate-800">• {t.customNoteLabel} </span>
                 <span className="text-slate-950 font-medium">
                   {customNote ||
                     '................................................................................................................................................................................'}
@@ -2066,57 +1968,61 @@ export default function App() {
             </div>
           </div>
 
-          {/* 3. YÊU CẦU KỸ THUẬT & TÍNH NĂNG CỐT LÕI */}
+          {/* 3. YÊU CẦU KỸ THUẬT, NGÔN NGỮ & TÍNH NĂNG CỐT LÕI */}
           <div className="mb-2">
             <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              3. Yêu cầu Kỹ thuật, Quy mô &amp; Phong cách Giao diện
+              {t.a4Sec3Title}
             </div>
             <div className="border border-slate-300 rounded-b p-2">
               <div className="grid grid-cols-3 gap-2 text-[9.5px]">
                 {/* Col A */}
                 <div className="border-r border-slate-200 pr-2">
-                  <div className="font-bold text-[#0C1B2E] mb-1 underline">Hạ tầng &amp; Dữ liệu</div>
-                  {INFRA_OPTIONS.map((item) => (
-                    <div key={item} className="flex items-start gap-1 mb-0.5">
+                  <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColInfra}</div>
+                  {t.infraOptions.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-1 mb-0.5">
                       <span className="font-mono font-bold">
-                        {selectedInfra.includes(item) ? '[✓]' : '[ ]'}
+                        {infraIdx.includes(idx) ? '[✓]' : '[ ]'}
                       </span>
-                      <span className={selectedInfra.includes(item) ? 'font-bold' : ''}>{item}</span>
+                      <span className={infraIdx.includes(idx) ? 'font-bold' : ''}>{item}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Col B */}
+                {/* Col B: Scale + Target Languages (Việt, Anh, Hoa, Nhật, Hàn) */}
                 <div className="border-r border-slate-200 pr-2">
-                  <div className="font-bold text-[#0C1B2E] mb-1 underline">Quy mô &amp; Nền tảng</div>
-                  {SCALE_OPTIONS.map((item) => (
-                    <div key={item} className="flex items-start gap-1 mb-0.5">
+                  <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColScale}</div>
+                  {t.scaleOptions.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-1 mb-0.5">
                       <span className="font-mono font-bold">
-                        {selectedScale.includes(item) ? '[✓]' : '[ ]'}
+                        {scaleIdx.includes(idx) ? '[✓]' : '[ ]'}
                       </span>
-                      <span className={selectedScale.includes(item) ? 'font-bold' : ''}>{item}</span>
+                      <span className={scaleIdx.includes(idx) ? 'font-bold' : ''}>{item}</span>
                     </div>
                   ))}
+                  <div className="mt-1 pt-1 border-t border-slate-200">
+                    <span className="font-bold text-[#0C1B2E] block mb-0.5">
+                      🌐 {t.appLangLabel}
+                    </span>
+                    <div className="font-bold text-slate-900">
+                      {selectedAppLangs.join(' • ') || '🇻🇳 Tiếng Việt'}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Col C */}
                 <div>
-                  <div className="font-bold text-[#0C1B2E] mb-1 underline">Bảo mật &amp; Giao diện</div>
-                  {SECURITY_OPTIONS.map((item) => (
-                    <div key={item} className="flex items-start gap-1 mb-0.5">
+                  <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColSec}</div>
+                  {t.securityOptions.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-1 mb-0.5">
                       <span className="font-mono font-bold">
-                        {selectedSecurity.includes(item) ? '[✓]' : '[ ]'}
+                        {securityIdx.includes(idx) ? '[✓]' : '[ ]'}
                       </span>
-                      <span className={selectedSecurity.includes(item) ? 'font-bold' : ''}>{item}</span>
+                      <span className={securityIdx.includes(idx) ? 'font-bold' : ''}>{item}</span>
                     </div>
                   ))}
                   <div className="mt-1 pt-1 border-t border-slate-200">
-                    <span className="font-semibold">Phong cách: </span>
+                    <span className="font-semibold">{t.styleLabel} </span>
                     <span className="font-bold">{selectedStyle}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold">Ngôn ngữ: </span>
-                    <span className="font-bold">{languageNote}</span>
                   </div>
                 </div>
               </div>
@@ -2126,33 +2032,39 @@ export default function App() {
           {/* 4. PHÂN QUYỀN NGƯỜI DÙNG (ROLES & PERMISSIONS) */}
           <div className="mb-2">
             <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              4. Phân quyền Người dùng (Roles &amp; Permissions)
+              {t.a4Sec4Title}
             </div>
             <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
               <thead>
                 <tr className="bg-slate-100 text-slate-800">
-                  <th className="border border-slate-300 px-2 py-1 text-left w-1/4">Vai trò (Role)</th>
-                  <th className="border border-slate-300 px-2 py-1 text-center w-24">Số lượng</th>
-                  <th className="border border-slate-300 px-2 py-1 text-left">
-                    Quyền hạn chính (Xem, Thêm, Sửa, Xóa, Duyệt báo cáo...)
+                  <th className="border border-slate-300 px-2 py-1 text-left w-1/4">
+                    {t.a4RoleCol}
                   </th>
+                  <th className="border border-slate-300 px-2 py-1 text-center w-24">
+                    {t.a4QtyCol}
+                  </th>
+                  <th className="border border-slate-300 px-2 py-1 text-left">{t.a4PermCol}</th>
                 </tr>
               </thead>
               <tbody>
-                {roles.map((r) => (
-                  <tr key={r.id}>
-                    <td className="border border-slate-300 px-2 py-1 font-semibold">
-                      <span className="font-mono mr-1">{r.enabled ? '[✓]' : '[ ]'}</span>
-                      {r.name}
-                    </td>
-                    <td className="border border-slate-300 px-2 py-1 text-center font-medium">
-                      {r.enabled ? `${r.count} user` : '---'}
-                    </td>
-                    <td className="border border-slate-300 px-2 py-1 text-slate-700">
-                      {r.enabled ? r.permissions : 'Không sử dụng'}
-                    </td>
-                  </tr>
-                ))}
+                {roleStates.map((r, idx) => {
+                  const trans = t.defaultRoles[idx];
+                  const perm = r.customPermissions ?? trans?.permissions ?? '';
+                  return (
+                    <tr key={r.id}>
+                      <td className="border border-slate-300 px-2 py-1 font-semibold">
+                        <span className="font-mono mr-1">{r.enabled ? '[✓]' : '[ ]'}</span>
+                        {trans?.name}
+                      </td>
+                      <td className="border border-slate-300 px-2 py-1 text-center font-medium">
+                        {r.enabled ? `${r.count}` : '---'}
+                      </td>
+                      <td className="border border-slate-300 px-2 py-1 text-slate-700">
+                        {r.enabled ? perm : t.a4NotUsed}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -2160,45 +2072,50 @@ export default function App() {
           {/* 5. TÀI LIỆU ĐÍNH KÈM, GHI ÂM & HÌNH ẢNH MẪU */}
           <div className="mb-2">
             <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              5. Tài liệu Đính kèm, Ghi âm &amp; Hình ảnh Tham khảo
+              {t.a4Sec5Title}
             </div>
             <div className="border border-slate-300 rounded-b p-2 space-y-1 text-[9.5px]">
               <div className="grid grid-cols-3 gap-1">
-                {DOC_TYPE_OPTIONS.map((item) => (
-                  <div key={item} className="flex items-center gap-1">
+                {t.docTypesOptions.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-1">
                     <span className="font-mono font-bold">
-                      {selectedDocTypes.includes(item) ? '[✓]' : '[ ]'}
+                      {docTypesIdx.includes(idx) ? '[✓]' : '[ ]'}
                     </span>
-                    <span className={selectedDocTypes.includes(item) ? 'font-bold' : ''}>{item}</span>
+                    <span className={docTypesIdx.includes(idx) ? 'font-bold' : ''}>{item}</span>
                   </div>
                 ))}
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200">
                 <div>
-                  <span className="font-semibold">• Ghi âm &amp; File đính kèm: </span>
+                  <span className="font-semibold">{t.a4AudioAndFiles}</span>
                   <span>
-                    {audioUrl ? `Có file ghi âm (${formatDuration(recordingSeconds)}); ` : ''}
+                    {audioUrl ? `Voice (${formatDuration(recordingSeconds)}); ` : ''}
                     {attachedDocs.length > 0
                       ? attachedDocs.map((d) => d.name).join(', ')
                       : !audioUrl
-                      ? 'Không có file đính kèm trực tiếp'
+                      ? '---'
                       : ''}
                   </span>
                 </div>
                 <div>
-                  <span className="font-semibold">• Link tham khảo / Drive: </span>
-                  <span className="underline">{referenceLink || '................................................................'}</span>
+                  <span className="font-semibold">{t.a4RefLink}</span>
+                  <span className="underline">
+                    {referenceLink || '................................................................'}
+                  </span>
                 </div>
               </div>
 
               {/* Render up to 4 captured images compactly so A4 stays 1 page */}
               {capturedImages.length > 0 && (
                 <div className="pt-1 border-t border-slate-200">
-                  <div className="font-semibold mb-1">• Hình ảnh chụp / Giao diện mẫu đính kèm:</div>
+                  <div className="font-semibold mb-1">{t.a4AttachedPhotos}</div>
                   <div className="grid grid-cols-4 gap-2">
                     {capturedImages.map((img) => (
-                      <div key={img.id} className="border border-slate-300 rounded p-0.5 text-center">
+                      <div
+                        key={img.id}
+                        className="border border-slate-300 rounded p-0.5 text-center"
+                      >
                         <img
                           src={img.dataUrl}
                           alt={img.name}
@@ -2216,22 +2133,22 @@ export default function App() {
           {/* A4 Footer Introducing Duy Anh Digital Lab */}
           <div className="border-t-2 border-[#0C1B2E] pt-1.5 flex items-center justify-between text-[9px] text-slate-700">
             <div>
-              <div className="font-extrabold text-[#0C1B2E] uppercase">
-                DUY ANH DIGITAL LAB — HỆ SINH THÁI ỨNG DỤNG WEB CHUYÊN SÂU &amp; GIẢI PHÁP AI
-              </div>
+              <div className="font-extrabold text-[#0C1B2E] uppercase">{t.a4FooterTitle}</div>
               <div>
-                Khám phá các dự án thực tế tại:{' '}
-                <strong className="text-[#0C1B2E]">https://duy-anh-digital-lab.vercel.app</strong> &amp;{' '}
-                <strong className="text-[#0C1B2E]">https://ungdung.vercel.app</strong>
+                {t.a4FooterExplore}{' '}
+                <strong className="text-[#0C1B2E]">https://duy-anh-digital-lab.vercel.app</strong>{' '}
+                &amp; <strong className="text-[#0C1B2E]">https://ungdung.vercel.app</strong>
               </div>
-              <div>
-                Lĩnh vực tiêu biểu: Báo cáo Thuế HKD • AI Advisor &amp; Đào tạo • R&amp;D Mỹ phẩm &amp; F&amp;B • Quản lý Hợp đồng &amp; SCM • ERP Nông nghiệp • Trợ lý Ngân hàng.
-              </div>
+              <div>{t.a4FooterDomains}</div>
             </div>
             <div className="text-right shrink-0 pl-3 border-l border-slate-300">
-              <div className="font-bold text-[#0C1B2E]">LIÊN HỆ TRIỂN KHAI</div>
-              <div>Email: <strong>anhpob@gmail.com</strong></div>
-              <div>Zalo / ĐT: <strong>+84 908 095693</strong></div>
+              <div className="font-bold text-[#0C1B2E]">{t.a4FooterContact}</div>
+              <div>
+                Email: <strong>anhpob@gmail.com</strong>
+              </div>
+              <div>
+                Zalo / Tel: <strong>+84 908 095693</strong>
+              </div>
             </div>
           </div>
         </div>
