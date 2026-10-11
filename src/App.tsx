@@ -20,9 +20,6 @@ import {
   Volume2,
   Image as ImageIcon,
   FileText,
-  Users,
-  Briefcase,
-  Globe,
   Share2,
   Download,
   Languages,
@@ -30,24 +27,22 @@ import {
   ArrowLeft,
   ArrowUp,
   Edit3,
-  CheckCheck
+  CheckCheck,
+  User,
+  Building2,
+  ChevronDown,
+  ChevronUp,
+  Bot,
+  Send,
+  PhoneCall
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import {
   LangCode,
   SUPPORTED_LANGUAGES,
-  APP_TARGET_LANGUAGES,
-  TRANSLATIONS,
-  PresetItem
+  APP_TARGET_LANGUAGES
 } from './i18n';
-
-interface RoleState {
-  id: string;
-  enabled: boolean;
-  count: string;
-  customPermissions?: string;
-}
 
 interface CapturedImage {
   id: string;
@@ -63,239 +58,631 @@ interface AttachedDoc {
   file: File;
 }
 
-const INTERVIEW_STEPS_LABELS: Record<
-  LangCode,
-  {
-    stepNames: string[];
-    q1Title: string;
-    q1Sub: string;
-    q2Title: string;
-    q2Sub: string;
-    q3Title: string;
-    q3Sub: string;
-    q4Title: string;
-    q4Sub: string;
-    q5Title: string;
-    q5Sub: string;
-    doneTitle: string;
-    doneSub: string;
-    nextBtn: string;
-    prevBtn: string;
-    finishBtn: string;
-    editBtn: string;
-    voiceAnswerBtn: string;
-    voiceListening: string;
-    printNowBigBtn: string;
-  }
-> = {
+interface ChatMessage {
+  id: string;
+  sender: 'bot' | 'user';
+  text: string;
+}
+
+interface CompactI18n {
+  headerTitle: string;
+  subHeaderNote: string;
+  step1Tab: string;
+  step2Tab: string;
+  step3Tab: string;
+  step4Tab: string;
+
+  // Step 1
+  s1Title: string;
+  s1Sub: string;
+  usageTypeLabel: string;
+  personalUsage: string;
+  companyUsage: string;
+  contactNameLabel: string;
+  contactNamePlaceholder: string;
+  phoneLabel: string;
+  phonePlaceholder: string;
+  orgNameLabel: string;
+  orgNamePlaceholder: string;
+  emailLabel: string;
+  emailPlaceholder: string;
+
+  // Step 2
+  s2Title: string;
+  s2Sub: string;
+  wishLabel: string;
+  wishPlaceholder: string;
+  voiceRecordBtn: string;
+  voiceRecordingActive: string;
+  voiceConvertingNote: string;
+  toggleSuggestionsBtn: string;
+  hideSuggestionsBtn: string;
+  suggestionsList: string[];
+  openChatboxBtn: string;
+
+  // Step 3 (Merged 3-4-5)
+  s3Title: string;
+  s3Sub: string;
+  appLangLabel: string;
+  userScopeLabel: string;
+  userScopeOptions: string[];
+  timelineLabel: string;
+  timelineOptions: string[];
+  attachmentSectionLabel: string;
+  cameraBtn: string;
+  attachFileBtn: string;
+  refLinkPlaceholder: string;
+
+  // Step 4 (Done & Print)
+  doneTitle: string;
+  doneSub: string;
+  printBigBtn: string;
+  downloadPdfBtn: string;
+  sendEmailBtn: string;
+  sendZaloBtn: string;
+  previewA4Btn: string;
+  editBtn: string;
+  nextBtn: string;
+  prevBtn: string;
+  finishBtn: string;
+  resetBtn: string;
+
+  // Chatbox
+  chatTitle: string;
+  chatSub: string;
+  chatGreeting: string;
+  chatInputPlaceholder: string;
+  chatQuickReplies: string[];
+  chatApplyBtn: string;
+
+  // A4 Sheet
+  a4MainTitle: string;
+  a4SubNote: string;
+  a4Sec1: string;
+  a4Sec2: string;
+  a4Sec3: string;
+  a4Sec4: string;
+  a4CallbackPromise: string;
+}
+
+const COMPACT_TEXT: Record<LangCode, CompactI18n> = {
   vi: {
-    stepNames: [
-      '1. Thông tin & Lĩnh vực',
-      '2. Ý tưởng & Mục tiêu',
-      '3. Ngôn ngữ & Tính năng',
-      '4. Người dùng & Tiến độ',
-      '5. Ghi âm & Hình ảnh',
-      '✅ Hoàn thành & In Phiếu'
+    headerTitle: 'PHIẾU YÊU CẦU THIẾT KẾ WEB & ỨNG DỤNG',
+    subHeaderNote: 'Điền cực ngắn trong 30 giây • Chuyên viên kỹ thuật sẽ gọi lại tư vấn chi tiết',
+    step1Tab: '1. Liên hệ & Mục đích',
+    step2Tab: '2. Mô tả Mong muốn',
+    step3Tab: '3. Ngôn ngữ & Đính kèm',
+    step4Tab: '✅ Hoàn thành & In A4',
+
+    s1Title: 'Bước 1/3: Bạn làm ứng dụng cho Cá nhân hay Công ty?',
+    s1Sub: 'Chỉ cần để lại thông tin liên hệ cơ bản, đội ngũ kỹ thuật sẽ gọi lại tư vấn chi tiết cho bạn.',
+    usageTypeLabel: 'Mục đích sử dụng:',
+    personalUsage: '👤 Ứng dụng Cá nhân',
+    companyUsage: '🏢 Phục vụ Công ty / Tổ chức',
+    contactNameLabel: 'Họ tên của bạn',
+    contactNamePlaceholder: 'VD: Anh Minh / Chị Lan...',
+    phoneLabel: 'Số điện thoại / Zalo *',
+    phonePlaceholder: 'VD: 0908 xxx xxx (Để nhân viên gọi lại)',
+    orgNameLabel: 'Tên Công ty / Đơn vị (Nếu có)',
+    orgNamePlaceholder: 'VD: Công ty ABC / Hộ kinh doanh...',
+    emailLabel: 'Email (Không bắt buộc)',
+    emailPlaceholder: 'VD: ten@gmail.com',
+
+    s2Title: 'Bước 2/3: Mong muốn & Yêu cầu riêng của bạn là gì?',
+    s2Sub: 'Bấm "Ghi âm giọng nói" để nói trực tiếp (tự động chuyển thành chữ, không cần đánh máy) hoặc nhấn xem gợi ý.',
+    wishLabel: 'Mô tả mong muốn / Ý tưởng ứng dụng của bạn:',
+    wishPlaceholder: 'Bấm nút Ghi âm 🎙️ bên trên để nói trực tiếp ra chữ, hoặc nhập ngắn gọn mong muốn của bạn tại đây...',
+    voiceRecordBtn: '🎙️ Bấm để Ghi âm (Tự chuyển thành chữ)',
+    voiceRecordingActive: '⏹️ Đang nghe & chuyển thành chữ... (Bấm để hoàn tất)',
+    voiceConvertingNote: '✨ Giọng nói của bạn đang được chuyển trực tiếp thành văn bản bên dưới:',
+    toggleSuggestionsBtn: '💡 Nhấn để chọn câu trả lời gợi ý (Không cần gõ)',
+    hideSuggestionsBtn: 'Ẩn gợi ý câu trả lời',
+    suggestionsList: [
+      'Quản lý công việc, hợp đồng & xuất báo cáo tự động',
+      'Thay thế file Excel / sổ sách thủ công bằng Web App trên điện thoại',
+      'Ứng dụng báo cáo thuế & quản lý doanh thu Hộ kinh doanh',
+      'Tích hợp Trợ lý AI tư vấn chuyên môn / tra cứu dữ liệu R&D',
+      'Trang web cho khách hàng tự đặt lịch hẹn, đặt hàng & tra cứu',
+      'Nền tảng đào tạo nội bộ, học ngoại ngữ & kiểm tra trực tuyến',
+      'Landing Page giới thiệu công ty, sản phẩm & thu thập khách hàng'
     ],
-    q1Title: 'Câu 1/5: Chào bạn! Bạn muốn thiết kế Web App cho đơn vị và lĩnh vực nào?',
-    q1Sub: 'Bạn có thể chạm chọn mẫu gợi ý bên dưới, gõ phím hoặc bấm nút Mic 🎙️ để nói trực tiếp.',
-    q2Title: 'Câu 2/5: Bài toán khó khăn hiện tại và ý tưởng chính của bạn là gì?',
-    q2Sub: 'Chạm chọn các mục phù hợp hoặc bấm "🎙️ Trả lời bằng giọng nói" để kể nhanh ý tưởng của bạn.',
-    q3Title: 'Câu 3/5: Bạn muốn Web App hỗ trợ những ngôn ngữ và tính năng kỹ thuật nào?',
-    q3Sub: 'Tích chọn ngôn ngữ hiển thị (Việt, Anh, Hoa, Nhật, Hàn) và hạ tầng mong muốn.',
-    q4Title: 'Câu 4/5: Những ai sẽ sử dụng hệ thống này và tiến độ bạn mong muốn?',
-    q4Sub: 'Chọn các nhóm người dùng cần phân quyền và thời gian dự kiến triển khai.',
-    q5Title: 'Câu 5/5: Bạn có muốn Ghi âm lời nhắn, Chụp ảnh mẫu hoặc Đính kèm file không?',
-    q5Sub: 'Không bắt buộc — Bạn có thể ghi âm giọng nói, chụp ảnh bản vẽ tay/màn hình mẫu hoặc nhấn Hoàn thành ngay!',
-    doneTitle: '🎉 Đã hoàn thành Phiếu Yêu Cầu Thiết Kế Web & Ứng Dụng!',
-    doneSub: 'Kiểm tra lại tóm tắt bên dưới và bấm "In Phiếu Yêu Cầu (1 Trang A4)", "Tải PDF" hoặc gửi qua Email / Zalo.',
+    openChatboxBtn: '💬 Tương tác qua Chatbox thông minh',
+
+    s3Title: 'Bước 3/3: Tùy chọn Ngôn ngữ & Đính kèm (Gọn trong 1 bước)',
+    s3Sub: 'Chỉ chọn những gì bạn cần — các chi tiết kỹ thuật sâu hơn nhân viên sẽ trao đổi trực tiếp.',
+    appLangLabel: '1. Ngôn ngữ hiển thị trên Web App:',
+    userScopeLabel: '2. Đối tượng sử dụng chính:',
+    userScopeOptions: [
+      '👤 Chỉ mình tôi / Cá nhân',
+      '👥 Nội bộ công ty (Admin & Nhân viên)',
+      '🌐 Có cả Khách hàng / Đối tác truy cập'
+    ],
+    timelineLabel: '3. Thời gian mong muốn:',
+    timelineOptions: [
+      '⚡ Cần gấp (3 - 7 ngày)',
+      '📅 Tiêu chuẩn (2 - 4 tuần)',
+      '💡 Tư vấn khi gọi lại'
+    ],
+    attachmentSectionLabel: '4. Chụp ảnh mẫu, Ghi âm hoặc Đính kèm file sẵn có (Nếu có):',
+    cameraBtn: '📷 Chụp ảnh mẫu / Màn hình',
+    attachFileBtn: '📎 Đính kèm File (Excel, Word, Ảnh)',
+    refLinkPlaceholder: '🔗 Dán link trang web mẫu hoặc Google Drive (Có thể bấm Ctrl+V dán ảnh)...',
+
+    doneTitle: '🎉 Đã hoàn tất Phiếu Yêu Cầu!',
+    doneSub: 'Nhân viên Duy Anh Digital Lab sẽ liên hệ lại với bạn sớm nhất. Bạn có thể In ngay ra 1 trang A4 hoặc gửi qua Email / Zalo:',
+    printBigBtn: '🖨️ IN PHIẾU YÊU CẦU (CHUẨN 1 TRANG A4)',
+    downloadPdfBtn: '📄 TẢI FILE PDF (1 TRANG A4)',
+    sendEmailBtn: 'Gửi Email',
+    sendZaloBtn: 'Gửi Zalo',
+    previewA4Btn: 'Xem bản in A4',
+    editBtn: 'Sửa lại thông tin',
     nextBtn: 'Tiếp theo',
     prevBtn: 'Quay lại',
-    finishBtn: 'Hoàn thành Phỏng vấn',
-    editBtn: 'Sửa lại câu trả lời',
-    voiceAnswerBtn: '🎙️ Bấm để Nói câu trả lời (Chuyển giọng nói thành chữ)',
-    voiceListening: '🔴 Đang nghe bạn nói... (Bấm để dừng)',
-    printNowBigBtn: '🖨️ IN PHIẾU YÊU CẦU RA GIẤY A4 (1 TRANG)'
+    finishBtn: 'Hoàn thành',
+    resetBtn: 'Làm mới',
+
+    chatTitle: 'Trợ lý Tư vấn Duy Anh Lab',
+    chatSub: 'Trả lời nhanh bằng chạm hoặc giọng nói',
+    chatGreeting: 'Chào bạn! Bạn chỉ cần nhắn hoặc bấm chọn bên dưới: Bạn muốn làm ứng dụng phục vụ công việc gì? Tôi sẽ tự động tổng hợp vào phiếu cho bạn!',
+    chatInputPlaceholder: 'Nhập hoặc bấm Mic 🎙️ để nói...',
+    chatQuickReplies: [
+      'Tôi muốn làm ứng dụng cho Công ty',
+      'Tôi muốn làm ứng dụng Cá nhân',
+      'Cần thay thế file Excel đang dùng',
+      'Cần tích hợp AI tư vấn thông minh',
+      'Nhân viên gọi lại tư vấn kỹ hơn giúp tôi'
+    ],
+    chatApplyBtn: 'Đóng & Lưu vào Phiếu',
+
+    a4MainTitle: 'PHIẾU YÊU CẦU THIẾT KẾ WEB & ỨNG DỤNG (WEB APP BRIEF)',
+    a4SubNote: 'Tiếp nhận: anhpob@gmail.com | Zalo / Hotline: +84 908 095693',
+    a4Sec1: '1. THÔNG TIN LIÊN HỆ & MỤC ĐÍCH SỬ DỤNG',
+    a4Sec2: '2. MONG MUỐN & YÊU CẦU RIÊNG CỦA KHÁCH HÀNG',
+    a4Sec3: '3. NGÔN NGỮ, ĐỐI TƯỢNG SỬ DỤNG & TIẾN ĐỘ',
+    a4Sec4: '4. HÌNH ẢNH MẪU, GHI ÂM & TÀI LIỆU ĐÍNH KÈM',
+    a4CallbackPromise: '✔ Chuyên viên kỹ thuật Duy Anh Digital Lab sẽ liên hệ trực tiếp để tư vấn chi tiết kiến trúc & demo giải pháp.'
   },
+
   en: {
-    stepNames: [
-      '1. Contact & Domain',
-      '2. Idea & Goals',
-      '3. Languages & Tech',
-      '4. Users & Timeline',
-      '5. Voice & Photos',
-      '✅ Finish & Print A4'
+    headerTitle: 'WEB & APP DESIGN REQUEST BRIEF',
+    subHeaderNote: 'Quick 30-second brief • Our specialist will call you back for detailed consultation',
+    step1Tab: '1. Contact & Purpose',
+    step2Tab: '2. Your Wishes',
+    step3Tab: '3. Language & Files',
+    step4Tab: '✅ Finish & Print A4',
+
+    s1Title: 'Step 1/3: Is this Web App for Personal or Company use?',
+    s1Sub: 'Leave your basic contact info — our engineering team will call you back to discuss details.',
+    usageTypeLabel: 'Purpose of Use:',
+    personalUsage: '👤 Personal Application',
+    companyUsage: '🏢 Company / Organization',
+    contactNameLabel: 'Your Name',
+    contactNamePlaceholder: 'e.g., John Doe...',
+    phoneLabel: 'Phone / Zalo / WhatsApp *',
+    phonePlaceholder: 'e.g., +84 908 xxx xxx (For callback)',
+    orgNameLabel: 'Company / Organization (Optional)',
+    orgNamePlaceholder: 'e.g., ABC Corp...',
+    emailLabel: 'Email (Optional)',
+    emailPlaceholder: 'e.g., name@company.com',
+
+    s2Title: 'Step 2/3: What is your main wish & custom requirement?',
+    s2Sub: 'Click "Record Voice" to speak directly (auto-converts to text without typing) or tap to view sample ideas.',
+    wishLabel: 'Describe your desired Web App / Custom requirements:',
+    wishPlaceholder: 'Tap the Record Voice 🎙️ button above to speak directly to text, or briefly type your idea here...',
+    voiceRecordBtn: '🎙️ Record Voice (Auto Speech-to-Text)',
+    voiceRecordingActive: '⏹️ Listening & converting to text... (Tap to finish)',
+    voiceConvertingNote: '✨ Your voice is being automatically transcribed into text below:',
+    toggleSuggestionsBtn: '💡 Tap to pick sample answers (No typing needed)',
+    hideSuggestionsBtn: 'Hide sample answers',
+    suggestionsList: [
+      'Manage tasks, contracts & export automated reports',
+      'Replace scattered Excel spreadsheets with a mobile-friendly Web App',
+      'Business revenue & automated tax reporting application',
+      'Integrate an AI Advisor for specialized R&D / data lookup',
+      'Client portal for online booking, ordering & status lookup',
+      'Internal training, language learning & online testing platform',
+      'High-converting brand Landing Page & lead capture'
     ],
-    q1Title: 'Step 1/5: Welcome! What organization and industry is this Web App for?',
-    q1Sub: 'Tap a quick template below, type briefly, or click the Mic 🎙️ button to speak.',
-    q2Title: 'Step 2/5: What current challenges and core ideas do you want to solve?',
-    q2Sub: 'Tap the matching tags or click "🎙️ Answer by Voice" to describe your idea effortlessly.',
-    q3Title: 'Step 3/5: Which languages and technical features should the Web App include?',
-    q3Sub: 'Select target languages (Vietnamese, English, Chinese, Japanese, Korean) and platform specs.',
-    q4Title: 'Step 4/5: Who will use this Web App and what is your expected timeline?',
-    q4Sub: 'Select user roles and your preferred delivery schedule.',
-    q5Title: 'Step 5/5: Would you like to Record a Voice Note, Snap a Photo, or Attach Files?',
-    q5Sub: 'Optional — Record voice instructions, snap a sketch/screenshot, or click Finish right away!',
-    doneTitle: '🎉 Your Web Application Design Brief is Ready!',
-    doneSub: 'Review your summary below and click "Print 1-Page A4 Brief", "Download PDF", or send via Email / Zalo.',
-    nextBtn: 'Next Step',
-    prevBtn: 'Back',
-    finishBtn: 'Finish Interview',
+    openChatboxBtn: '💬 Interactive Smart Chatbox',
+
+    s3Title: 'Step 3/3: Languages & Attachments (All-in-One Compact Step)',
+    s3Sub: 'Select only what you need — our specialist will clarify technical details on the phone.',
+    appLangLabel: '1. Languages to support in the Web App:',
+    userScopeLabel: '2. Primary Users:',
+    userScopeOptions: [
+      '👤 Just me / Personal use',
+      '👥 Internal Team (Admin & Staff)',
+      '🌐 Includes Clients / Partners access'
+    ],
+    timelineLabel: '3. Preferred Timeline:',
+    timelineOptions: [
+      '⚡ Urgent (3 - 7 days)',
+      '📅 Standard (2 - 4 weeks)',
+      '💡 Advise on callback'
+    ],
+    attachmentSectionLabel: '4. Snap Reference Photo, Voice Note, or Attach Files (Optional):',
+    cameraBtn: '📷 Snap Photo / Screenshot',
+    attachFileBtn: '📎 Attach File (Excel, Word, Image)',
+    refLinkPlaceholder: '🔗 Paste reference link or Google Drive (Or press Ctrl+V to paste screenshot)...',
+
+    doneTitle: '🎉 Your Request Brief is Complete!',
+    doneSub: 'Our specialist will contact you shortly. You can Print a 1-Page A4 Brief now or send via Email / Zalo:',
+    printBigBtn: '🖨️ PRINT REQUEST BRIEF (1-PAGE A4)',
+    downloadPdfBtn: '📄 DOWNLOAD PDF (1-PAGE A4)',
+    sendEmailBtn: 'Send Email',
+    sendZaloBtn: 'Send Zalo',
+    previewA4Btn: 'Preview A4 Sheet',
     editBtn: 'Edit Answers',
-    voiceAnswerBtn: '🎙️ Tap to Speak Your Answer (Voice-to-Text)',
-    voiceListening: '🔴 Listening to you... (Tap to stop)',
-    printNowBigBtn: '🖨️ PRINT REQUEST BRIEF (1-PAGE A4)'
-  },
-  zh: {
-    stepNames: [
-      '1. 基本信息与领域',
-      '2. 核心创意与目标',
-      '3. 语言与技术功能',
-      '4. 用户权限与周期',
-      '5. 录音与拍照附件',
-      '✅ 完成并打印A4'
+    nextBtn: 'Next',
+    prevBtn: 'Back',
+    finishBtn: 'Complete',
+    resetBtn: 'Reset',
+
+    chatTitle: 'Duy Anh Lab Smart Assistant',
+    chatSub: 'Quick tap or voice interaction',
+    chatGreeting: 'Hello! Simply tap a quick option below or speak/type what you want your Web App to do. I will add it straight to your brief!',
+    chatInputPlaceholder: 'Type or tap Mic 🎙️ to speak...',
+    chatQuickReplies: [
+      'I need a Web App for my Company',
+      'I need a Personal Web App',
+      'Replace my current Excel files',
+      'Integrate an AI Assistant',
+      'Please call me to advise in detail'
     ],
-    q1Title: '第 1/5 步：您好！请问您想为哪个单位和行业定制 Web 应用？',
-    q1Sub: '您可以点击下方快速模板、打字输入，或点击麦克风 🎙️ 直接语音输入。',
-    q2Title: '第 2/5 步：目前面临的痛点问题以及您的核心想法是什么？',
-    q2Sub: '点击适合的选项，或点击“🎙️ 语音回答”直接口述您的想法。',
-    q3Title: '第 3/5 步：您希望 Web 应用支持哪些语言与技术功能？',
-    q3Sub: '勾选需要集成的语言（越、英、中、日、韩）及界面风格。',
-    q4Title: '第 4/5 步：哪些人员会使用该系统？您期望的开发周期是？',
-    q4Sub: '选择用户角色权限及期望的上线时间。',
-    q5Title: '第 5/5 步：是否需要录制语音留言、拍照上传样图或添加附件？',
-    q5Sub: '选填 — 您可以直接录音、拍摄手稿/参考界面，或立即点击完成！',
-    doneTitle: '🎉 您的 Web 应用程序设计需求表已完成！',
-    doneSub: '请确认下方摘要，点击“打印单页A4需求表”、“下载PDF”或通过邮件 / Zalo 发送。',
+    chatApplyBtn: 'Save & Close Chat',
+
+    a4MainTitle: 'WEB & APPLICATION DESIGN REQUEST BRIEF',
+    a4SubNote: 'Contact: anhpob@gmail.com | Zalo / Hotline: +84 908 095693',
+    a4Sec1: '1. CONTACT INFORMATION & PURPOSE OF USE',
+    a4Sec2: '2. CLIENT WISHES & CUSTOM REQUIREMENTS',
+    a4Sec3: '3. TARGET LANGUAGES, USER SCOPE & TIMELINE',
+    a4Sec4: '4. REFERENCE PHOTOS, VOICE NOTE & ATTACHMENTS',
+    a4CallbackPromise: '✔ Duy Anh Digital Lab engineers will contact you directly to advise on architecture & demo solutions.'
+  },
+
+  zh: {
+    headerTitle: '网站与Web应用定制需求表',
+    subHeaderNote: '30秒极简填写 • 技术顾问将回电为您详细解答',
+    step1Tab: '1. 联系与用途',
+    step2Tab: '2. 需求描述',
+    step3Tab: '3. 语言与附件',
+    step4Tab: '✅ 完成并打印A4',
+
+    s1Title: '第 1/3 步：请问该应用是个人使用还是公司使用？',
+    s1Sub: '只需留下基本联系方式，我们的技术团队将回电与您沟通细节。',
+    usageTypeLabel: '使用对象:',
+    personalUsage: '👤 个人专属应用',
+    companyUsage: '🏢 服务于公司 / 机构',
+    contactNameLabel: '您的姓名',
+    contactNamePlaceholder: '例如：陈先生 / 林女士...',
+    phoneLabel: '联系电话 / Zalo / 微信 *',
+    phonePlaceholder: '例如：+84 908 xxx xxx (方便回电沟通)',
+    orgNameLabel: '公司 / 单位名称 (选填)',
+    orgNamePlaceholder: '例如：ABC公司...',
+    emailLabel: '电子邮箱 (选填)',
+    emailPlaceholder: '例如：name@company.com',
+
+    s2Title: '第 2/3 步：您的核心愿望与专属需求是什么？',
+    s2Sub: '点击“语音录制”直接口述（完成后自动转为文字，无需打字），或点击展开参考选项。',
+    wishLabel: '简述您的想法或希望解决的问题:',
+    wishPlaceholder: '点击上方“语音录制 🎙️”直接说话转文字，或在此简短输入您的需求...',
+    voiceRecordBtn: '🎙️ 点击录音 (自动语音转文字，免打字)',
+    voiceRecordingActive: '⏹️ 正在倾听并转文字... (点击完成)',
+    voiceConvertingNote: '✨ 您的语音已实时转换为以下文字：',
+    toggleSuggestionsBtn: '💡 点击选择常见需求模板 (免打字)',
+    hideSuggestionsBtn: '收起常见需求模板',
+    suggestionsList: [
+      '管理业务流程、合同并自动生成报表',
+      '用手机/电脑Web应用替代繁琐的Excel表格',
+      '个体工商户营收管理与智能税务申报',
+      '集成AI智能顾问辅助专业研发与数据查询',
+      '客户自助预约、下单与进度查询系统',
+      '企业内部培训、语言学习与在线考核平台',
+      '高端企业形象展示与获客Landing Page'
+    ],
+    openChatboxBtn: '💬 打开智能对话助手互动',
+
+    s3Title: '第 3/3 步：支持语言与附件上传 (一页式极简汇总)',
+    s3Sub: '只需勾选核心项 — 详细技术参数由工程师回电沟通。',
+    appLangLabel: '1. Web应用需支持的语言:',
+    userScopeLabel: '2. 主要使用人群:',
+    userScopeOptions: [
+      '👤 仅个人使用',
+      '👥 公司内部团队 (管理员与员工)',
+      '🌐 包含外部客户 / 合作伙伴访问'
+    ],
+    timelineLabel: '3. 期望上线时间:',
+    timelineOptions: [
+      '⚡ 加急 (3 - 7天)',
+      '📅 标准 (2 - 4周)',
+      '💡 回电时详细评估'
+    ],
+    attachmentSectionLabel: '4. 拍照上传参考样图、录音或现有文件 (选填):',
+    cameraBtn: '📷 拍照 / 上传参考截图',
+    attachFileBtn: '📎 添加文件 (Excel, Word, 图片)',
+    refLinkPlaceholder: '🔗 粘贴参考网站或网盘链接 (支持 Ctrl+V 直接粘贴截图)...',
+
+    doneTitle: '🎉 您的需求表已完成！',
+    doneSub: '我们的技术顾问将尽快与您联系。您可以立即打印单页A4需求表，或通过邮件 / Zalo发送：',
+    printBigBtn: '🖨️ 打印需求表 (标准单页 A4)',
+    downloadPdfBtn: '📄 下载 PDF (单页 A4)',
+    sendEmailBtn: '发送邮件',
+    sendZaloBtn: '发送 Zalo',
+    previewA4Btn: '预览 A4 打印页',
+    editBtn: '修改内容',
     nextBtn: '下一步',
     prevBtn: '上一步',
-    finishBtn: '完成填写',
-    editBtn: '修改内容',
-    voiceAnswerBtn: '🎙️ 点击语音回答 (自动语音转文字)',
-    voiceListening: '🔴 正在倾听您的语音... (点击停止)',
-    printNowBigBtn: '🖨️ 打印需求表 (标准单页 A4)'
+    finishBtn: '完成',
+    resetBtn: '重置',
+
+    chatTitle: 'Duy Anh Lab 智能顾问助手',
+    chatSub: '支持点击或语音快速互动',
+    chatGreeting: '您好！无需繁琐打字，您可以直接点击下方快捷回复，或语音告诉我您想做什么应用，我会自动为您整理到需求表中！',
+    chatInputPlaceholder: '输入内容或点击麦克风 🎙️ 说话...',
+    chatQuickReplies: [
+      '我想开发公司内部管理应用',
+      '我想开发个人使用的应用',
+      '希望把现有的Excel表格变成Web系统',
+      '需要集成AI智能专业顾问',
+      '请安排工程师电话联系我详细沟通'
+    ],
+    chatApplyBtn: '保存并关闭对话',
+
+    a4MainTitle: 'WEB应用程序定制设计需求表 (WEB APP BRIEF)',
+    a4SubNote: '接收邮箱: anhpob@gmail.com | Zalo / 热线: +84 908 095693',
+    a4Sec1: '1. 联系信息与使用目的',
+    a4Sec2: '2. 客户核心愿望与专属定制需求',
+    a4Sec3: '3. 支持语言、使用人群与期望周期',
+    a4Sec4: '4. 参考图片、语音记录与附件资料',
+    a4CallbackPromise: '✔ Duy Anh Digital Lab 技术专家将直接与您联系，提供详细的架构建议与方案演示。'
   },
+
   ja: {
-    stepNames: [
-      '1. 基本情報・分野',
-      '2. 課題とアイデア',
-      '3. 言語・技術仕様',
-      '4. 利用者・納期',
-      '5. 録音・写真添付',
-      '✅ 完了＆A4印刷'
+    headerTitle: 'Webアプリ開発 要件ヒアリングシート',
+    subHeaderNote: '30秒で簡単入力 • 担当エンジニアより折り返し詳細をご案内します',
+    step1Tab: '1. 連絡先・用途',
+    step2Tab: '2. ご要望の記述',
+    step3Tab: '3. 言語・添付資料',
+    step4Tab: '✅ 完了＆A4印刷',
+
+    s1Title: 'ステップ 1/3：個人用アプリですか？法人・社内用ですか？',
+    s1Sub: 'ご連絡先のみご入力ください。詳細は担当エンジニアよりお電話・Zaloにてヒアリングいたします。',
+    usageTypeLabel: 'ご利用目的:',
+    personalUsage: '👤 個人用アプリケーション',
+    companyUsage: '🏢 法人・社内業務向け',
+    contactNameLabel: 'お名前',
+    contactNamePlaceholder: '例：田中 太郎...',
+    phoneLabel: '電話番号 / Zalo *',
+    phonePlaceholder: '例：+84 908 xxx xxx (折り返しご連絡用)',
+    orgNameLabel: '会社名・組織名 (任意)',
+    orgNamePlaceholder: '例：株式会社ABC...',
+    emailLabel: 'メールアドレス (任意)',
+    emailPlaceholder: '例：name@company.com',
+
+    s2Title: 'ステップ 2/3：実現したいアイデアやご要望をお聞かせください',
+    s2Sub: '「音声録音」を押して話すだけで自動的にテキスト化されます（タイピング不要）。回答例から選ぶことも可能です。',
+    wishLabel: 'ご希望のアプリ内容・独自要件:',
+    wishPlaceholder: '上の「音声録音 🎙️」を押して話すだけで自動文字入力されます。または短くご記入ください...',
+    voiceRecordBtn: '🎙️ 音声で話す (自動テキスト変換・文字入力不要)',
+    voiceRecordingActive: '⏹️ 音声を聞き取り＆文字変換中... (タップで完了)',
+    voiceConvertingNote: '✨ お話しいただいた内容が自動的にテキスト化されています：',
+    toggleSuggestionsBtn: '💡 よくある要望例から選ぶ (タップで自動入力)',
+    hideSuggestionsBtn: '要望例を閉じる',
+    suggestionsList: [
+      '業務・契約管理とレポートの自動出力',
+      '現在のExcelや紙の管理をスマホ対応Webアプリに置き換えたい',
+      '売上集計・税務申告の自動化アプリ',
+      '専門データ検索・R&D支援のためのAIアドバイザー搭載',
+      '顧客がオンラインで予約・注文・照会できるシステム',
+      '社内研修・語学学習・オンラインテストプラットフォーム',
+      'ブランド紹介＆顧客獲得用ランディングページ'
     ],
-    q1Title: '質問 1/5：どの企業・分野向けのWebアプリをご希望ですか？',
-    q1Sub: 'テンプレートをタップするか、短い文字入力またはマイク 🎙️ で音声入力できます。',
-    q2Title: '質問 2/5：現在の課題や実現したいコアアイデアは何ですか？',
-    q2Sub: '当てはまる項目を選ぶか、「🎙️ 音声で回答」を押して自由にお話しください。',
-    q3Title: '質問 3/5：搭載したい言語や技術機能・デザインは？',
-    q3Sub: '対応言語（ベトナム語・英語・中国語・日本語・韓国語）と仕様を選択してください。',
-    q4Title: '質問 4/5：利用するユーザー層とご希望の納期は？',
-    q4Sub: 'ユーザーの役割（権限）と開発スケジュールを選択してください。',
-    q5Title: '質問 5/5：音声録音や参考写真の撮影・ファイル添付はありますか？',
-    q5Sub: '任意 — 音声メモの録音、手書き案のカメラ撮影、またはそのまま「完了」を押せます！',
-    doneTitle: '🎉 Webアプリ開発 要件ヒアリングシートが完成しました！',
-    doneSub: '内容をご確認の上、「A4（1枚）印刷」「PDF保存」またはメール / Zaloで送信してください。',
-    nextBtn: '次へ進む',
+    openChatboxBtn: '💬 チャットボットと対話して入力',
+
+    s3Title: 'ステップ 3/3：対応言語と資料添付 (1ページ集約)',
+    s3Sub: '必要な項目だけ選択してください。細かい技術仕様は担当者よりご案内します。',
+    appLangLabel: '1. Webアプリに搭載する言語:',
+    userScopeLabel: '2. 主な利用者:',
+    userScopeOptions: [
+      '👤 自分のみ / 個人利用',
+      '👥 社内メンバー (管理者・スタッフ)',
+      '🌐 社外の顧客・取引先も利用'
+    ],
+    timelineLabel: '3. ご希望の時期:',
+    timelineOptions: [
+      '⚡ お急ぎ (3〜7日)',
+      '📅 標準 (2〜4週間)',
+      '💡 相談して決めたい'
+    ],
+    attachmentSectionLabel: '4. 参考写真の撮影・音声・既存ファイルの添付 (任意):',
+    cameraBtn: '📷 カメラ撮影 / スクショ追加',
+    attachFileBtn: '📎 ファイル添付 (Excel, Word, 画像)',
+    refLinkPlaceholder: '🔗 参考URLやGoogleドライブのリンク (Ctrl+Vで画像貼付も可)...',
+
+    doneTitle: '🎉 ヒアリングシートが完成しました！',
+    doneSub: '担当者より速やかにご連絡いたします。A4（1枚）印刷・PDF保存、またはメール / Zaloで送信できます：',
+    printBigBtn: '🖨️ 要件シートを印刷する (A4用紙 1枚)',
+    downloadPdfBtn: '📄 PDFをダウンロード (A4 1枚)',
+    sendEmailBtn: 'メール送信',
+    sendZaloBtn: 'Zalo送信',
+    previewA4Btn: 'A4プレビュー',
+    editBtn: '内容を修正',
+    nextBtn: '次へ',
     prevBtn: '戻る',
-    finishBtn: '回答を完了する',
-    editBtn: '回答を修正する',
-    voiceAnswerBtn: '🎙️ 音声で回答する (音声テキスト変換)',
-    voiceListening: '🔴 音声を聞き取り中... (タップで停止)',
-    printNowBigBtn: '🖨️ 要件シートを印刷する (A4用紙 1枚)'
-  },
-  ko: {
-    stepNames: [
-      '1. 기본 정보 & 분야',
-      '2. 아이디어 & 목표',
-      '3. 지원 언어 & 기술',
-      '4. 사용자 & 일정',
-      '5. 음성 녹음 & 사진',
-      '✅ 완료 & A4 인쇄'
+    finishBtn: '完了する',
+    resetBtn: 'リセット',
+
+    chatTitle: 'Duy Anh Lab スマート相談チャット',
+    chatSub: 'タップまたは音声で簡単回答',
+    chatGreeting: 'こんにちは！タイピングは不要です。下のボタンを押すか、作りたいアプリを音声・短文で教えてください。自動的にシートへ反映します！',
+    chatInputPlaceholder: 'メッセージを入力、または 🎙️ で音声入力...',
+    chatQuickReplies: [
+      '社内業務用のWebアプリを作りたい',
+      '個人用のアプリを作りたい',
+      '現在使っているExcelをWeb化したい',
+      'AIアドバイザー機能を組み込みたい',
+      '電話・Zaloで詳しく相談したい'
     ],
-    q1Title: '질문 1/5: 안녕하세요! 어떤 기업/분야의 웹앱을 제작하고 싶으신가요?',
-    q1Sub: '아래 템플릿을 터치하거나 짧게 타이핑 또는 마이크 🎙️ 버튼으로 말씀해 주세요.',
-    q2Title: '질문 2/5: 현재 해결하고 싶은 문제점과 핵심 아이디어는 무엇인가요?',
-    q2Sub: '항목을 선택하시거나 "🎙️ 음성으로 답변하기"를 눌러 편하게 말씀해 주세요.',
-    q3Title: '질문 3/5: 웹앱에 탑재할 언어와 기술 사양·디자인 스타일은?',
-    q3Sub: '지원 언어(베트남어, 영어, 중국어, 일본어, 한국어)와 주요 기능을 선택해 주세요.',
-    q4Title: '질문 4/5: 어떤 사용자들이 이용하며, 희망하시는 개발 일정은 언제인가요?',
-    q4Sub: '권한별 사용자 그룹과 희망 제작 일정을 선택해 주세요.',
-    q5Title: '질문 5/5: 음성 녹음, 참고 사진 촬영 또는 파일 첨부가 필요하신가요?',
-    q5Sub: '선택 사항 — 음성 녹음이나 스케치 사진 촬영을 추가하거나 바로 완료를 누르세요!',
-    doneTitle: '🎉 웹 & 애플리케이션 맞춤 설계 요청서가 완성되었습니다!',
-    doneSub: '아래 요약 내용을 확인하시고 "A4 1장 인쇄", "PDF 다운로드" 또는 이메일 / Zalo로 전송하세요.',
-    nextBtn: '다음 단계',
+    chatApplyBtn: 'シートに反映して閉じる',
+
+    a4MainTitle: 'Webアプリケーション開発 要件ヒアリングシート (WEB APP BRIEF)',
+    a4SubNote: '受付: anhpob@gmail.com | Zalo / 電話: +84 908 095693',
+    a4Sec1: '1. ご連絡先・ご利用目的',
+    a4Sec2: '2. ご希望のアプリ内容・独自要件',
+    a4Sec3: '3. 対応言語・利用者層・ご希望納期',
+    a4Sec4: '4. 参考画像・音声メモ・添付ファイル',
+    a4CallbackPromise: '✔ Duy Anh Digital Lab のエンジニアより直接ご連絡し、最適な設計とデモをご提案いたします。'
+  },
+
+  ko: {
+    headerTitle: '웹 & 앱 맞춤 설계 간편 요청서',
+    subHeaderNote: '30초 초간단 작성 • 전문 엔지니어가 연락드려 상세히 상담해 드립니다',
+    step1Tab: '1. 연락처 & 용도',
+    step2Tab: '2. 희망사항 작성',
+    step3Tab: '3. 언어 & 파일 첨부',
+    step4Tab: '✅ 완료 & A4 인쇄',
+
+    s1Title: '1/3 단계: 개인용 앱인가요, 회사 업무용인가요?',
+    s1Sub: '기본 연락처만 남겨주시면 담당 엔지니어가 연락드려 세부 사항을 안내해 드립니다.',
+    usageTypeLabel: '사용 목적:',
+    personalUsage: '👤 개인용 애플리케이션',
+    companyUsage: '🏢 회사 / 기관 업무용',
+    contactNameLabel: '성함',
+    contactNamePlaceholder: '예: 김민수 / 박지영...',
+    phoneLabel: '연락처 / Zalo / 카카오톡 *',
+    phonePlaceholder: '예: +84 908 xxx xxx (상담 연락용)',
+    orgNameLabel: '회사 / 기관명 (선택)',
+    orgNamePlaceholder: '예: ABC 주식회사...',
+    emailLabel: '이메일 (선택)',
+    emailPlaceholder: '예: name@company.com',
+
+    s2Title: '2/3 단계: 원하시는 기능이나 특별한 요구사항은 무엇인가요?',
+    s2Sub: '"음성 녹음"을 눌러 말씀하시면 자동으로 텍스트로 변환됩니다(타이핑 불필요). 예시 답변을 눌러 선택할 수도 있습니다.',
+    wishLabel: '희망하시는 웹앱 아이디어 / 요구사항:',
+    wishPlaceholder: '위의 "음성 녹음 🎙️" 버튼을 눌러 바로 말씀하시거나 짧게 입력해 주세요...',
+    voiceRecordBtn: '🎙️ 음성으로 말하기 (자동 텍스트 변환 · 타이핑 불필요)',
+    voiceRecordingActive: '⏹️ 음성을 텍스트로 변환 중... (터치하여 완료)',
+    voiceConvertingNote: '✨ 말씀하신 내용이 아래에 텍스트로 자동 입력되고 있습니다:',
+    toggleSuggestionsBtn: '💡 자주 찾는 요구사항 예시 보기 (터치하여 선택)',
+    hideSuggestionsBtn: '예시 답변 닫기',
+    suggestionsList: [
+      '업무·계약 관리 및 보고서 자동 생성 시스템',
+      '기존 엑셀/수기 장부를 스마트폰·PC 겸용 웹앱으로 전환',
+      '매출 관리 및 세무 신고 자동화 웹앱',
+      '전문 데이터 검색 및 R&D 지원을 위한 AI 어드바이저 탑재',
+      '고객 셀프 예약, 주문 및 실시간 조회 웹앱',
+      '사내 교육, 외국어 학습 및 온라인 테스트 플랫폼',
+      '기업/브랜드 소개 및 고객 문의 수집 랜딩페이지'
+    ],
+    openChatboxBtn: '💬 스마트 챗봇으로 간편 대화하기',
+
+    s3Title: '3/3 단계: 지원 언어 및 첨부파일 (한 페이지로 끝내기)',
+    s3Sub: '필요한 항목만 가볍게 선택하세요 — 세부 기술 사항은 상담 시 안내해 드립니다.',
+    appLangLabel: '1. 웹앱에 탑재할 언어:',
+    userScopeLabel: '2. 주요 사용자:',
+    userScopeOptions: [
+      '👤 개인 단독 사용',
+      '👥 사내 임직원 (관리자 & 직원)',
+      '🌐 외부 고객 / 파트너사 함께 사용'
+    ],
+    timelineLabel: '3. 희망 일정:',
+    timelineOptions: [
+      '⚡ 긴급 (3 - 7일)',
+      '📅 표준 (2 - 4주)',
+      '💡 통화 후 결정'
+    ],
+    attachmentSectionLabel: '4. 샘플 사진 촬영, 음성 또는 보유 파일 첨부 (선택):',
+    cameraBtn: '📷 카메라 촬영 / 캡처 사진',
+    attachFileBtn: '📎 파일 첨부 (엑셀, 워드, 사진)',
+    refLinkPlaceholder: '🔗 참고 사이트 또는 구글 드라이브 링크 (Ctrl+V로 캡처 이미지 바로 붙여넣기)...',
+
+    doneTitle: '🎉 요청서 작성이 완료되었습니다!',
+    doneSub: '담당자가 빠르게 연락드리겠습니다. 지금 바로 A4 1장으로 인쇄하거나 이메일 / Zalo로 전송할 수 있습니다:',
+    printBigBtn: '🖨️ 요청서 인쇄하기 (A4 1장 맞춤)',
+    downloadPdfBtn: '📄 PDF 다운로드 (A4 1장)',
+    sendEmailBtn: '이메일 전송',
+    sendZaloBtn: 'Zalo 전송',
+    previewA4Btn: 'A4 인쇄 미리보기',
+    editBtn: '내용 수정',
+    nextBtn: '다음',
     prevBtn: '이전',
-    finishBtn: '작성 완료하기',
-    editBtn: '내용 수정하기',
-    voiceAnswerBtn: '🎙️ 음성으로 답변 말하기 (음성 텍스트 자동 변환)',
-    voiceListening: '🔴 말씀을 듣고 있습니다... (중지하려면 터치)',
-    printNowBigBtn: '🖨️ 요청서 인쇄하기 (A4 1장 맞춤)'
+    finishBtn: '작성 완료',
+    resetBtn: '초기화',
+
+    chatTitle: 'Duy Anh Lab 스마트 상담 챗봇',
+    chatSub: '터치나 음성으로 간편하게 답변하세요',
+    chatGreeting: '안녕하세요! 길게 타이핑하실 필요 없이 아래 버튼을 누르시거나 원하시는 앱을 음성/짧은 글로 말씀해 주시면 요청서에 자동으로 정리해 드립니다!',
+    chatInputPlaceholder: '메시지를 입력하거나 🎙️ 버튼으로 말씀하세요...',
+    chatQuickReplies: [
+      '회사 업무용 웹앱을 만들고 싶어요',
+      '개인용 웹앱을 만들고 싶어요',
+      '사용 중인 엑셀 파일을 웹앱으로 바꾸고 싶어요',
+      'AI 상담/분석 기능을 넣고 싶어요',
+      '담당자가 전화/Zalo로 상세히 상담해 주세요'
+    ],
+    chatApplyBtn: '요청서에 반영 후 닫기',
+
+    a4MainTitle: '웹 & 애플리케이션 맞춤 설계 요청서 (WEB APP BRIEF)',
+    a4SubNote: '접수처: anhpob@gmail.com | Zalo / 직통전화: +84 908 095693',
+    a4Sec1: '1. 연락처 및 사용 목적',
+    a4Sec2: '2. 고객 핵심 희망사항 및 맞춤 요구사항',
+    a4Sec3: '3. 지원 언어, 주요 사용자 및 희망 일정',
+    a4Sec4: '4. 참고 사진, 음성 메모 및 첨부 자료',
+    a4CallbackPromise: '✔ Duy Anh Digital Lab 전문 엔지니어가 직접 연락드려 최적의 설계와 데모를 안내해 드립니다.'
   }
 };
 
 export default function App() {
-  // Active UI Language (vi, en, zh, ja, ko)
   const [lang, setLang] = useState<LangCode>('vi');
-  const t = TRANSLATIONS[lang];
-  const wiz = INTERVIEW_STEPS_LABELS[lang];
+  const c = COMPACT_TEXT[lang];
   const currentLangMeta =
     SUPPORTED_LANGUAGES.find((l) => l.code === lang) || SUPPORTED_LANGUAGES[0];
 
-  // Current Interview Step: 1..5 = Interview Questions, 6 = Completed Summary & Print Screen
+  // 3 Ultra-Simple Steps (1: Contact & Usage, 2: Wishes + Voice-to-Text + Suggestions/Chat, 3: Merged Lang/Timeline/Files, 4: Done & Print)
   const [step, setStep] = useState<number>(1);
 
-  // 1. General Info
-  const [companyName, setCompanyName] = useState('');
+  // Step 1 State
+  const [usageType, setUsageType] = useState<'personal' | 'company'>('company');
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
-  const [projectName, setProjectName] = useState('');
-  const [timelineIdx, setTimelineIdx] = useState<number>(1);
 
-  // 2. Pain Points & Goals
-  const [painPointsIdx, setPainPointsIdx] = useState<number[]>([0, 1]);
-  const [goalsIdx, setGoalsIdx] = useState<number[]>([0, 1]);
-  const [customNote, setCustomNote] = useState('');
+  // Step 2 State: Wishes (Only 1 clean box + expandable suggestions + auto voice-to-text)
+  const [wishText, setWishText] = useState('');
+  const [selectedSuggestionsIdx, setSelectedSuggestionsIdx] = useState<number[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // 3. Technical, Scale, Security, Style & Target App Languages (Việt, Anh, Hoa, Nhật, Hàn)
-  const [infraIdx, setInfraIdx] = useState<number[]>([0, 2, 3]);
-  const [scaleIdx, setScaleIdx] = useState<number[]>([0, 1]);
-  const [securityIdx, setSecurityIdx] = useState<number[]>([0]);
-  const [styleIdx, setStyleIdx] = useState<number>(0);
+  // Step 3 State (Merged 3-4-5 into 1 clean screen)
   const [selectedAppLangsIdx, setSelectedAppLangsIdx] = useState<number[]>([0, 1]);
-
-  // 4. Roles & Permissions
-  const [roleStates, setRoleStates] = useState<RoleState[]>([
-    { id: 'admin', enabled: true, count: '1 - 2' },
-    { id: 'manager', enabled: true, count: '2 - 5' },
-    { id: 'staff', enabled: true, count: '5 - 30' },
-    { id: 'customer', enabled: true, count: 'Unlimited' }
-  ]);
-
-  // 5. Voice Recording, Speech-to-Text, Camera Photos & Attachments
-  const [docTypesIdx, setDocTypesIdx] = useState<number[]>([0]);
+  const [userScopeIdx, setUserScopeIdx] = useState<number>(1);
+  const [timelineIdx, setTimelineIdx] = useState<number>(1);
   const [referenceLink, setReferenceLink] = useState('');
   const [capturedImages, setCapturedImages] = useState<CapturedImage[]>([]);
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([]);
 
-  // Audio Recording & Dictation State
+  // Voice Recording + Real-time Speech-to-Text
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [liveTranscript, setLiveTranscript] = useState('');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [dictatingField, setDictatingField] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
+  const finalTranscriptAccumRef = useRef<string>('');
+
+  // Interactive Chatbox State
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatRecording, setIsChatRecording] = useState(false);
 
   // UI & Modal States
   const [showA4Preview, setShowA4Preview] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [activePreset, setActivePreset] = useState<string | null>(null);
   const [copiedToast, setCopiedToast] = useState<string | null>(null);
   const [sendModal, setSendModal] = useState<{
     open: boolean;
@@ -320,7 +707,18 @@ export default function App() {
     year: 'numeric'
   });
 
-  // Handle Ctrl+V paste screenshot anywhere on the page
+  // Initialize chat greeting when language changes
+  useEffect(() => {
+    setChatMessages([
+      {
+        id: 'welcome',
+        sender: 'bot',
+        text: COMPACT_TEXT[lang].chatGreeting
+      }
+    ]);
+  }, [lang]);
+
+  // Handle Ctrl+V paste screenshot anywhere
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -355,112 +753,100 @@ export default function App() {
     }
   };
 
-  const handleSwitchLanguage = (newLang: LangCode) => {
-    setLang(newLang);
-    if (activePreset) {
-      const presetInNewLang = TRANSLATIONS[newLang].presets.find((p) => p.id === activePreset);
-      if (presetInNewLang) {
-        setProjectName(presetInNewLang.projectName);
-        setCustomNote(presetInNewLang.customNote);
-      }
-    }
-    const meta = SUPPORTED_LANGUAGES.find((l) => l.code === newLang);
-    if (meta) {
-      showToast(`${meta.flag} ${meta.fullName}`);
-    }
-  };
+  // Toggle a sample suggestion and append/remove it cleanly in wishText
+  const handleToggleSuggestion = (idx: number) => {
+    const textItem = c.suggestionsList[idx];
+    const alreadySelected = selectedSuggestionsIdx.includes(idx);
 
-  const applyPreset = (preset: PresetItem) => {
-    setActivePreset(preset.id);
-    setProjectName(preset.projectName);
-    setPainPointsIdx(preset.painPointsIdx);
-    setGoalsIdx(preset.goalsIdx);
-    setInfraIdx(preset.infraIdx);
-    setScaleIdx(preset.scaleIdx);
-    setSecurityIdx(preset.securityIdx);
-    setStyleIdx(preset.styleIdx);
-    setCustomNote(preset.customNote);
-    showToast(`✓ ${preset.label}`);
+    if (alreadySelected) {
+      setSelectedSuggestionsIdx((prev) => prev.filter((i) => i !== idx));
+      setWishText((prev) =>
+        prev
+          .split('\n')
+          .filter((line) => line.trim() !== `• ${textItem}` && line.trim() !== textItem)
+          .join('\n')
+      );
+    } else {
+      setSelectedSuggestionsIdx((prev) => [...prev, idx]);
+      setWishText((prev) => {
+        const cleanPrev = prev.trim();
+        return cleanPrev ? `${cleanPrev}\n• ${textItem}` : `• ${textItem}`;
+      });
+      showToast(`✓ Đã thêm vào yêu cầu!`);
+    }
   };
 
   const resetForm = () => {
-    setActivePreset(null);
-    setCompanyName('');
+    setUsageType('company');
     setContactName('');
     setContactPhone('');
+    setCompanyName('');
     setContactEmail('');
-    setProjectName('');
-    setTimelineIdx(1);
-    setPainPointsIdx([0]);
-    setGoalsIdx([0]);
-    setCustomNote('');
-    setInfraIdx([0, 2, 3]);
-    setScaleIdx([0, 1]);
-    setSecurityIdx([0]);
-    setStyleIdx(0);
+    setWishText('');
+    setSelectedSuggestionsIdx([]);
+    setShowSuggestions(false);
     setSelectedAppLangsIdx([0, 1]);
-    setRoleStates([
-      { id: 'admin', enabled: true, count: '1 - 2' },
-      { id: 'manager', enabled: true, count: '2 - 5' },
-      { id: 'staff', enabled: true, count: '5 - 30' },
-      { id: 'customer', enabled: true, count: 'Unlimited' }
-    ]);
-    setDocTypesIdx([]);
+    setUserScopeIdx(1);
+    setTimelineIdx(1);
     setReferenceLink('');
     setCapturedImages([]);
     setAttachedDocs([]);
     setAudioUrl(null);
     setAudioBlob(null);
+    setLiveTranscript('');
     setStep(1);
-    showToast('✓ Đã làm mới từ đầu');
+    showToast('✓ Đã làm mới phiếu yêu cầu');
   };
 
-  // Universal Voice-to-Text Dictation for any field ('projectName' | 'customNote' | 'companyName')
-  const toggleFieldDictation = (
-    fieldKey: string,
-    setter: React.Dispatch<React.SetStateAction<string>>
-  ) => {
+  // ==================== VOICE RECORDING -> AUTO TEXT (SPEECH-TO-TEXT) ====================
+  const startVoiceToTextRecording = async () => {
+    setLiveTranscript('');
+    finalTranscriptAccumRef.current = '';
+
+    // 1. Start SpeechRecognition so voice is converted directly into text without typing
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      startRecording();
-      return;
-    }
 
-    if (dictatingField === fieldKey && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setDictatingField(null);
-      return;
-    }
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = currentLangMeta.speechLang;
+      recognition.continuous = true;
+      recognition.interimResults = true;
 
-    if (recognitionRef.current) {
+      recognition.onresult = (event: any) => {
+        let interim = '';
+        let finalChunk = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcriptPiece = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalChunk += transcriptPiece + ' ';
+          } else {
+            interim += transcriptPiece;
+          }
+        }
+        if (finalChunk.trim()) {
+          finalTranscriptAccumRef.current = `${finalTranscriptAccumRef.current} ${finalChunk.trim()}`.trim();
+          setWishText((prev) => {
+            const clean = prev.trim();
+            return clean ? `${clean} ${finalChunk.trim()}` : finalChunk.trim();
+          });
+        }
+        setLiveTranscript(interim);
+      };
+
+      recognition.onerror = () => {
+        // Keep recording audio if speech recognition pauses
+      };
+
       try {
-        recognitionRef.current.stop();
+        recognition.start();
+        recognitionRef.current = recognition;
       } catch {
         // Ignore
       }
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = currentLangMeta.speechLang;
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onstart = () => setDictatingField(fieldKey);
-    recognition.onend = () => setDictatingField(null);
-    recognition.onerror = () => setDictatingField(null);
-    recognition.onresult = (event: any) => {
-      const text = event.results[0]?.[0]?.transcript;
-      if (text) {
-        setter((prev) => (prev ? `${prev.trim()} ${text}` : text));
-        showToast(`🎙️ "${text}"`);
-      }
-    };
-    recognition.start();
-    recognitionRef.current = recognition;
-  };
-
-  // Full Voice Audio Recorder + Live Speech-to-Text
-  const startRecording = async () => {
+    // 2. Also start MediaRecorder so audio file is saved as backup attachment
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -488,50 +874,20 @@ export default function App() {
       timerRef.current = window.setInterval(() => {
         setRecordingSeconds((prev) => prev + 1);
       }, 1000);
-
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.lang = currentLangMeta.speechLang;
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.onresult = (event: any) => {
-          let transcript = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              transcript += event.results[i][0].transcript + ' ';
-            }
-          }
-          if (transcript.trim()) {
-            setCustomNote((prev) =>
-              prev ? `${prev.trim()} ${transcript.trim()}` : transcript.trim()
-            );
-          }
-        };
-        try {
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch {
-          // Ignore
-        }
-      }
     } catch {
-      alert(
-        'Vui lòng cấp quyền Microphone trên trình duyệt để ghi âm, hoặc chọn Đính kèm file.'
-      );
+      if (SpeechRecognition) {
+        setIsRecording(true);
+        setRecordingSeconds(0);
+        timerRef.current = window.setInterval(() => {
+          setRecordingSeconds((prev) => prev + 1);
+        }, 1000);
+      } else {
+        alert('Vui lòng cấp quyền Micro trên trình duyệt để ghi âm giọng nói thành chữ.');
+      }
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+  const stopVoiceToTextRecording = () => {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -540,7 +896,96 @@ export default function App() {
       }
       recognitionRef.current = null;
     }
-    showToast('🎙️ Đã lưu bản ghi âm giọng nói!');
+
+    if (mediaRecorderRef.current && isRecording) {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {
+        // Ignore
+      }
+    }
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    // Flush any remaining interim transcript into wishText
+    if (liveTranscript.trim()) {
+      const leftover = liveTranscript.trim();
+      setWishText((prev) => (prev.trim() ? `${prev.trim()} ${leftover}` : leftover));
+      setLiveTranscript('');
+    }
+
+    setIsRecording(false);
+    showToast('✅ Đã chuyển giọng nói thành văn bản (Text)!');
+  };
+
+  // Chatbox Interaction
+  const handleSendChatMessage = (textToSend?: string) => {
+    const msg = (textToSend ?? chatInput).trim();
+    if (!msg) return;
+
+    const userMsg: ChatMessage = {
+      id: `u-${Date.now()}`,
+      sender: 'user',
+      text: msg
+    };
+
+    // Append to wishText automatically
+    if (msg.includes('Cá nhân') || msg.includes('Personal') || msg.includes('个人') || msg.includes('個人')) {
+      setUsageType('personal');
+    } else if (msg.includes('Công ty') || msg.includes('Company') || msg.includes('公司') || msg.includes('社内') || msg.includes('회사')) {
+      setUsageType('company');
+    }
+
+    setWishText((prev) => {
+      const clean = prev.trim();
+      return clean ? `${clean}\n• ${msg}` : `• ${msg}`;
+    });
+
+    const botReply: ChatMessage = {
+      id: `b-${Date.now() + 1}`,
+      sender: 'bot',
+      text:
+        lang === 'vi'
+          ? `✔ Đã ghi nhận vào Phiếu Yêu Cầu: "${msg}". Bạn có muốn bổ sung thêm yêu cầu nào nữa không, hay nhấn "Đóng & Lưu vào Phiếu"?`
+          : `✔ Added to your Request Brief: "${msg}". Anything else to add, or click "Save & Close Chat"?`
+    };
+
+    setChatMessages((prev) => [...prev, userMsg, botReply]);
+    if (!textToSend) setChatInput('');
+  };
+
+  const toggleChatVoiceInput = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Trình duyệt không hỗ trợ nhận diện giọng nói trực tiếp.');
+      return;
+    }
+
+    if (isChatRecording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsChatRecording(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = currentLangMeta.speechLang;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onstart = () => setIsChatRecording(true);
+    recognition.onend = () => setIsChatRecording(false);
+    recognition.onerror = () => setIsChatRecording(false);
+    recognition.onresult = (e: any) => {
+      const spoken = e.results[0]?.[0]?.transcript;
+      if (spoken) {
+        handleSendChatMessage(spoken);
+      }
+    };
+    recognition.start();
+    recognitionRef.current = recognition;
   };
 
   const formatDuration = (sec: number) => {
@@ -618,76 +1063,54 @@ export default function App() {
         ]);
       }
     });
-    showToast('📎 Đã đính kèm tài liệu!');
+    showToast('📎 Đã đính kèm file!');
     e.target.value = '';
   };
 
-  // Resolved selected strings in active language
-  const selectedPainPoints = painPointsIdx.map((i) => t.painPointsOptions[i]).filter(Boolean);
-  const selectedGoals = goalsIdx.map((i) => t.goalsOptions[i]).filter(Boolean);
-  const selectedInfra = infraIdx.map((i) => t.infraOptions[i]).filter(Boolean);
-  const selectedScale = scaleIdx.map((i) => t.scaleOptions[i]).filter(Boolean);
-  const selectedSecurity = securityIdx.map((i) => t.securityOptions[i]).filter(Boolean);
-  const selectedStyle = t.styleOptions[styleIdx] || t.styleOptions[0];
-  const selectedTimeline = t.timelineOptions[timelineIdx] || t.timelineOptions[1];
-  const selectedDocTypes = docTypesIdx.map((i) => t.docTypesOptions[i]).filter(Boolean);
   const appLangOptions = APP_TARGET_LANGUAGES[lang];
   const selectedAppLangs = selectedAppLangsIdx.map((i) => appLangOptions[i]).filter(Boolean);
+  const selectedScope = c.userScopeOptions[userScopeIdx] || c.userScopeOptions[1];
+  const selectedTimeline = c.timelineOptions[timelineIdx] || c.timelineOptions[1];
+  const usageLabelText = usageType === 'personal' ? c.personalUsage : c.companyUsage;
 
-  // Build formatted summary text for Email & Zalo
+  // Build concise, clean summary text for Email & Zalo
   const buildFormattedBriefText = () => {
-    const activeRoles = roleStates
-      .map((rs, idx) => {
-        const trans = t.defaultRoles[idx];
-        return {
-          ...rs,
-          name: trans?.name || rs.id,
-          permissions: rs.customPermissions ?? trans?.permissions ?? ''
-        };
-      })
-      .filter((r) => r.enabled)
-      .map((r) => `  • ${r.name} (${r.count} user): ${r.permissions}`)
-      .join('\n');
-
     const lines = [
-      `📋 ${t.a4MainTitle} — DUY ANH DIGITAL LAB`,
-      `${t.a4DateLabel}: ${todayStr} | Ngôn ngữ: ${currentLangMeta.fullName}`,
+      `📋 ${c.a4MainTitle} — DUY ANH DIGITAL LAB`,
+      `Ngày: ${todayStr} | Ngôn ngữ phiếu: ${currentLangMeta.fullName}`,
       `--------------------------------------------------`,
-      `${t.a4Sec1Title}:`,
-      `• ${t.companyLabel}: ${companyName || '---'}`,
-      `• ${t.contactLabel}: ${contactName || '---'}`,
-      `• ${t.phoneLabel}: ${contactPhone || '---'}${contactEmail ? ` | Email: ${contactEmail}` : ''}`,
-      `• ${t.projectLabel}: ${projectName || '---'}`,
-      `• ${t.timelineLabel} ${selectedTimeline}`,
+      `1. LIÊN HỆ & MỤC ĐÍCH SỬ DỤNG:`,
+      `• Mục đích: ${usageLabelText}`,
+      `• Người liên hệ: ${contactName || '---'}`,
+      `• SĐT / Zalo: ${contactPhone || '---'}`,
+      companyName ? `• Công ty / Đơn vị: ${companyName}` : null,
+      contactEmail ? `• Email: ${contactEmail}` : null,
       ``,
-      `${t.a4Sec2Title}:`,
-      `• Pain Points: ${selectedPainPoints.join(', ') || '---'}`,
-      `• Goals: ${selectedGoals.join(', ') || '---'}`,
-      `• ${t.customNoteLabel} ${customNote || '---'}`,
+      `2. MONG MUỐN & YÊU CẦU RIÊNG:`,
+      wishText || '• Trao đổi trực tiếp khi nhân viên gọi lại',
       ``,
-      `${t.a4Sec3Title}:`,
-      `• ${t.a4ColInfra}: ${selectedInfra.join(', ')}`,
-      `• ${t.a4ColScale}: ${selectedScale.join(', ')}`,
-      `• 🌐 App Target Languages: ${selectedAppLangs.join(', ') || 'Tiếng Việt'}`,
-      `• ${t.a4ColSec}: ${selectedSecurity.join(', ')} | Style: ${selectedStyle}`,
-      ``,
-      `${t.a4Sec4Title}:`,
-      activeRoles || '  • Default',
-      ``,
-      `${t.a4Sec5Title}:`,
-      `• Documents: ${selectedDocTypes.join(', ') || '---'}`,
-      `• Voice Recording: ${audioUrl ? `Yes (${formatDuration(recordingSeconds)})` : 'No'}`,
-      `• Captured Photos: ${capturedImages.length > 0 ? `${capturedImages.length} (${capturedImages.map((i) => i.name).join(', ')})` : 'No'}`,
-      `• Attached Files: ${attachedDocs.length > 0 ? attachedDocs.map((d) => d.name).join(', ') : 'No'}`,
-      `• Reference Link: ${referenceLink || '---'}`,
+      `3. NGÔN NGỮ & TÙY CHỌN NHANH:`,
+      `• Ngôn ngữ tích hợp: ${selectedAppLangs.join(', ') || 'Tiếng Việt'}`,
+      `• Đối tượng sử dụng: ${selectedScope}`,
+      `• Thời gian mong muốn: ${selectedTimeline}`,
+      `• Đính kèm: ${
+        [
+          audioUrl ? `Ghi âm (${formatDuration(recordingSeconds)})` : '',
+          capturedImages.length > 0 ? `${capturedImages.length} ảnh mẫu` : '',
+          attachedDocs.length > 0 ? attachedDocs.map((d) => d.name).join(', ') : '',
+          referenceLink ? `Link: ${referenceLink}` : ''
+        ]
+          .filter(Boolean)
+          .join(' | ') || 'Không'
+      }`,
       `--------------------------------------------------`,
-      `🌐 Portfolio: https://duy-anh-digital-lab.vercel.app | https://ungdung.vercel.app`,
+      `🌐 Hệ sinh thái Duy Anh Digital Lab: https://ungdung.vercel.app`,
       `📧 Email: anhpob@gmail.com | 💬 Zalo: +84 908 095693`
-    ];
+    ].filter((l) => l !== null);
     return lines.join('\n');
   };
 
-  // Generate 1-Page A4 PDF Blob & Download
+  // Generate 1-Page A4 PDF
   const generateA4PdfBlob = async (): Promise<{ blob: Blob; fileName: string } | null> => {
     if (!a4SheetRef.current) return null;
     setIsGeneratingPdf(true);
@@ -727,10 +1150,10 @@ export default function App() {
 
       pdf.addImage(imgData, 'JPEG', xOffset, yOffset, renderW, renderH);
 
-      const safeName = (companyName || contactName || projectName || 'Brief')
+      const safeName = (contactName || companyName || 'KhachHang')
         .replace(/[^a-zA-Z0-9-_]/g, '-')
         .slice(0, 24);
-      const fileName = `Phieu-Yeu-Cau-WebApp-${safeName}-${lang.toUpperCase()}.pdf`;
+      const fileName = `Phieu-Yeu-Cau-WebApp-${safeName}.pdf`;
       const blob = pdf.output('blob');
       return { blob, fileName };
     } catch (error) {
@@ -750,7 +1173,7 @@ export default function App() {
       a.download = result.fileName;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('📄 Đã tải File PDF (Chuẩn 1 Trang A4)!');
+      showToast('📄 Đã tải File PDF (1 Trang A4)!');
     } else {
       window.print();
     }
@@ -791,14 +1214,14 @@ export default function App() {
       try {
         if (filesToShare.length > 0 && nav.canShare && nav.canShare({ files: filesToShare })) {
           await nav.share({
-            title: `Web App Brief - ${companyName || contactName || 'Duy Anh Digital Lab'}`,
+            title: `Phiếu Yêu Cầu Web App - ${contactName || companyName || 'Duy Anh Digital Lab'}`,
             text,
             files: filesToShare
           });
           return;
         } else {
           await nav.share({
-            title: `Web App Brief - ${companyName || contactName || 'Duy Anh Digital Lab'}`,
+            title: `Phiếu Yêu Cầu Web App - ${contactName || companyName || 'Duy Anh Digital Lab'}`,
             text
           });
           return;
@@ -808,7 +1231,7 @@ export default function App() {
       }
     }
     await navigator.clipboard.writeText(text);
-    showToast('✓ Đã sao chép toàn bộ nội dung!');
+    showToast('✓ Đã sao chép nội dung!');
   };
 
   const handleOpenSendChannel = async (channel: 'email' | 'zalo') => {
@@ -831,25 +1254,21 @@ export default function App() {
         const formData = new FormData();
         formData.append(
           '_subject',
-          `[Web App Brief - ${lang.toUpperCase()}] ${companyName || contactName || projectName || 'New Client'}`
+          `[Yêu Cầu Thiết Kế Web App] ${contactName || companyName || contactPhone || 'Khách hàng mới'}`
         );
         formData.append('_template', 'table');
         formData.append('_captcha', 'false');
-        formData.append('Language', currentLangMeta.fullName);
-        formData.append('Company / Org', companyName || '---');
-        formData.append('Contact Person', contactName || '---');
-        formData.append('Phone / Zalo', contactPhone || '---');
+        formData.append('Mục đích sử dụng', usageLabelText);
+        formData.append('Người liên hệ', contactName || '---');
+        formData.append('SĐT / Zalo', contactPhone || '---');
+        formData.append('Công ty / Đơn vị', companyName || '---');
         formData.append('Email', contactEmail || '---');
-        formData.append('Project Name', projectName || '---');
-        formData.append('Timeline', selectedTimeline);
-        formData.append('Pain Points', selectedPainPoints.join(', '));
-        formData.append('Expected Goals', selectedGoals.join(', '));
-        formData.append('Custom Idea', customNote || '---');
-        formData.append('Tech & Scale', `${selectedInfra.join(', ')} | ${selectedScale.join(', ')}`);
-        formData.append('Target App Languages', selectedAppLangs.join(', '));
-        formData.append('UI Style', selectedStyle);
-        formData.append('Reference Link', referenceLink || '---');
-        formData.append('Full Summary', summaryText);
+        formData.append('Mong muốn & Yêu cầu riêng', wishText || 'Trao đổi khi gọi lại');
+        formData.append('Ngôn ngữ tích hợp', selectedAppLangs.join(', '));
+        formData.append('Đối tượng sử dụng', selectedScope);
+        formData.append('Tiến độ', selectedTimeline);
+        formData.append('Link tham khảo', referenceLink || '---');
+        formData.append('Bản tóm tắt', summaryText);
 
         if (audioBlob) {
           formData.append('attachment_audio', audioBlob, 'Voice-Brief.webm');
@@ -880,7 +1299,7 @@ export default function App() {
 
   const openMailClient = () => {
     const subject = encodeURIComponent(
-      `[Web App Brief] ${companyName || contactName || projectName || 'Client'} - ${todayStr}`
+      `[Yêu Cầu Thiết Kế Web App] ${contactName || companyName || 'Khách hàng'} - ${todayStr}`
     );
     const body = encodeURIComponent(buildFormattedBriefText());
     window.location.href = `mailto:anhpob@gmail.com?subject=${subject}&body=${body}`;
@@ -888,7 +1307,7 @@ export default function App() {
 
   const openGmailWeb = () => {
     const subject = encodeURIComponent(
-      `[Web App Brief] ${companyName || contactName || projectName || 'Client'} - ${todayStr}`
+      `[Yêu Cầu Thiết Kế Web App] ${contactName || companyName || 'Khách hàng'} - ${todayStr}`
     );
     const body = encodeURIComponent(buildFormattedBriefText());
     window.open(
@@ -908,8 +1327,10 @@ export default function App() {
     window.open('https://zalo.me/84908095693', '_blank');
   };
 
+  const stepTabs = [c.step1Tab, c.step2Tab, c.step3Tab, c.step4Tab];
+
   return (
-    <div className="min-h-dvh flex flex-col bg-gradient-to-br from-slate-50 via-white to-amber-50/40 text-slate-900">
+    <div className="min-h-dvh flex flex-col bg-gradient-to-br from-slate-50 via-white to-amber-50/30 text-slate-900">
       {/* Toast Notification */}
       {copiedToast && (
         <div className="no-print fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-amber-300 font-bold text-base px-6 py-3 rounded-full shadow-2xl flex items-center gap-2.5 border border-amber-400/40 animate-bounce">
@@ -918,17 +1339,16 @@ export default function App() {
         </div>
       )}
 
-      {/* ==================== BRIGHT INTERACTIVE INTERVIEW WIZARD ==================== */}
-      <div className="no-print flex-1 flex flex-col justify-between max-w-5xl w-full mx-auto px-4 sm:px-6 py-3 sm:py-5">
-        {/* TOP HEADER: Brand + 5 Languages + Progress Stepper */}
-        <header className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200/90 rounded-2xl px-4 py-3 shadow-sm">
-            {/* Logo & Title */}
+      {/* ==================== ULTRA-SIMPLE 3-STEP INTERVIEW WIZARD ==================== */}
+      <div className="no-print flex-1 flex flex-col max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        {/* TOP HEADER: Brand + 5 Languages */}
+        <header className="space-y-3 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
             <a
-              href="https://duy-anh-digital-lab.vercel.app"
+              href="https://ungdung.vercel.app"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 group"
+              className="flex items-center gap-3"
             >
               <img
                 src="/logo-duyanhlab.jpg"
@@ -936,39 +1356,42 @@ export default function App() {
                 className="h-11 sm:h-12 w-auto rounded-xl border border-slate-200 shadow-sm object-cover"
               />
               <div>
-                <div className="text-xs sm:text-sm font-extrabold tracking-wider text-amber-700 uppercase">
+                <div className="text-xs font-extrabold tracking-wider text-amber-700 uppercase">
                   DUY ANH LAB • digital
                 </div>
                 <h1 className="text-base sm:text-xl font-extrabold text-slate-900 leading-tight">
-                  {t.headerTitle}
+                  {c.headerTitle}
                 </h1>
+                <p className="text-xs sm:text-sm text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                  <PhoneCall className="w-3.5 h-3.5" /> {c.subHeaderNote}
+                </p>
               </div>
             </a>
 
-            {/* 5-Language Switcher (Chữ to, sáng rõ) */}
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+            {/* 5-Language Switcher */}
+            <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
               <Languages className="w-4 h-4 text-slate-600 ml-1 hidden sm:inline" />
               {SUPPORTED_LANGUAGES.map((l) => (
                 <button
                   key={l.code}
                   type="button"
-                  onClick={() => handleSwitchLanguage(l.code)}
-                  className={`text-sm font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 ${
+                  onClick={() => setLang(l.code)}
+                  className={`text-xs sm:text-sm font-bold px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
                     lang === l.code
-                      ? 'bg-slate-900 text-amber-300 shadow-md scale-105'
+                      ? 'bg-slate-900 text-amber-300 shadow-md'
                       : 'text-slate-700 hover:bg-white hover:text-slate-950'
                   }`}
                 >
-                  <span className="text-base">{l.flag}</span>
+                  <span>{l.flag}</span>
                   <span>{l.shortLabel}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Interactive Step Progress Pills (1..5 + Done) */}
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-            {wiz.stepNames.map((label, idx) => {
+          {/* 4-Tab Progress Bar (3 Questions + Finish) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {stepTabs.map((label, idx) => {
               const sNum = idx + 1;
               const isCurrent = step === sNum;
               const isPassed = step > sNum;
@@ -977,140 +1400,150 @@ export default function App() {
                   key={sNum}
                   type="button"
                   onClick={() => setStep(sNum)}
-                  className={`text-xs sm:text-sm font-bold py-2.5 px-2 rounded-xl border transition truncate text-center ${
+                  className={`text-sm sm:text-base font-extrabold py-3 px-3 rounded-2xl border-2 transition truncate text-center ${
                     isCurrent
-                      ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md ring-2 ring-amber-400/50'
+                      ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md'
                       : isPassed
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
                       : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-800'
                   }`}
                 >
-                  {isPassed && sNum < 6 ? `✓ ${label}` : label}
+                  {isPassed && sNum < 4 ? `✓ ${label}` : label}
                 </button>
               );
             })}
           </div>
         </header>
 
-        {/* CENTER INTERVIEW CARD (ONLY SHOWS 1 STEP AT A TIME — LARGE FONT, BRIGHT & CLEAN) */}
-        <main className="my-3 sm:my-4 flex-1 flex flex-col justify-center">
-          <div className="bg-white border-2 border-slate-200/90 rounded-3xl p-5 sm:p-8 shadow-xl transition-all">
-            {/* ==================== STEP 1: THÔNG TIN LIÊN HỆ & MẪU DỰ ÁN ==================== */}
+        {/* MAIN INTERVIEW CARD */}
+        <main className="flex-1 flex flex-col justify-center">
+          <div className="bg-white border-2 border-slate-200/90 rounded-3xl p-5 sm:p-8 shadow-xl">
+            {/* ==================== STEP 1/3: LIÊN HỆ & MỤC ĐÍCH (CÁ NHÂN / CÔNG TY) ==================== */}
             {step === 1 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                    {wiz.q1Title}
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    {c.s1Title}
                   </h2>
-                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q1Sub}</p>
+                  <p className="text-base sm:text-lg text-slate-600 mt-1">{c.s1Sub}</p>
                 </div>
 
-                {/* Quick Presets (Chữ to) */}
+                {/* Personal vs Company Big Toggle */}
                 <div>
-                  <div className="text-sm sm:text-base font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
-                    <Sparkles className="w-5 h-5 text-amber-600" />
-                    <span>{t.quickPresetLabel}</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                    {t.presets.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => applyPreset(preset)}
-                        className={`text-left text-base sm:text-lg font-bold p-3.5 rounded-2xl border-2 transition flex items-center justify-between ${
-                          activePreset === preset.id
-                            ? 'bg-amber-50 border-amber-600 text-slate-950 shadow-md'
-                            : 'bg-slate-50/80 border-slate-200 text-slate-800 hover:border-slate-400 hover:bg-white'
-                        }`}
-                      >
-                        <span>{preset.label}</span>
-                        {activePreset === preset.id && (
-                          <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
-                        )}
-                      </button>
-                    ))}
+                  <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2.5">
+                    {c.usageTypeLabel}
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <button
+                      type="button"
+                      onClick={() => setUsageType('personal')}
+                      className={`p-4 sm:p-5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                        usageType === 'personal'
+                          ? 'bg-amber-50 border-amber-600 text-slate-950 shadow-md'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                            usageType === 'personal'
+                              ? 'bg-slate-900 text-amber-300'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          <User className="w-6 h-6" />
+                        </div>
+                        <span className="text-lg sm:text-xl font-extrabold">
+                          {c.personalUsage}
+                        </span>
+                      </div>
+                      {usageType === 'personal' && (
+                        <CheckCircle2 className="w-6 h-6 text-amber-600 shrink-0" />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setUsageType('company')}
+                      className={`p-4 sm:p-5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                        usageType === 'company'
+                          ? 'bg-amber-50 border-amber-600 text-slate-950 shadow-md'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                            usageType === 'company'
+                              ? 'bg-slate-900 text-amber-300'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          <Building2 className="w-6 h-6" />
+                        </div>
+                        <span className="text-lg sm:text-xl font-extrabold">
+                          {c.companyUsage}
+                        </span>
+                      </div>
+                      {usageType === 'company' && (
+                        <CheckCircle2 className="w-6 h-6 text-amber-600 shrink-0" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                {/* Large Input Fields with Mic Button */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div className="sm:col-span-2">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-base sm:text-lg font-bold text-slate-800">
-                        {t.projectLabel}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => toggleFieldDictation('projectName', setProjectName)}
-                        className={`text-xs sm:text-sm font-bold px-3 py-1 rounded-full flex items-center gap-1.5 border transition ${
-                          dictatingField === 'projectName'
-                            ? 'bg-rose-600 text-white border-rose-600 animate-pulse'
-                            : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-                        }`}
-                      >
-                        <Mic className="w-4 h-4" />
-                        <span>
-                          {dictatingField === 'projectName' ? wiz.voiceListening : t.dictateBtn}
-                        </span>
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      value={projectName}
-                      onChange={(e) => setProjectName(e.target.value)}
-                      placeholder={t.projectPlaceholder}
-                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-xl font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
-                    />
-                  </div>
-
+                {/* Simple Contact Inputs (No Expected App Name, No Clutter) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <div>
                     <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
-                      {t.contactLabel}
+                      {c.contactNameLabel}
                     </label>
                     <input
                       type="text"
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
-                      placeholder={t.contactPlaceholder}
-                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
+                      placeholder={c.contactNamePlaceholder}
+                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3.5 text-lg sm:text-xl font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-base sm:text-lg font-bold text-amber-800 mb-1.5">
-                      {t.phoneLabel}
+                    <label className="block text-base sm:text-lg font-extrabold text-amber-800 mb-1.5">
+                      {c.phoneLabel}
                     </label>
                     <input
                       type="tel"
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
-                      placeholder={t.phonePlaceholder}
-                      className="w-full bg-amber-50/40 focus:bg-white border-2 border-amber-400 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-bold text-slate-900 placeholder-slate-400 outline-none transition"
+                      placeholder={c.phonePlaceholder}
+                      className="w-full bg-amber-50/50 focus:bg-white border-2 border-amber-400 focus:border-slate-900 rounded-2xl px-4 py-3.5 text-lg sm:text-xl font-bold text-slate-900 placeholder-slate-400 outline-none transition"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
-                      {t.companyLabel}
-                    </label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder={t.companyPlaceholder}
-                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
-                    />
-                  </div>
+                  {usageType === 'company' && (
+                    <div>
+                      <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
+                        {c.orgNameLabel}
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder={c.orgNamePlaceholder}
+                        className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
+                      />
+                    </div>
+                  )}
 
-                  <div>
+                  <div className={usageType === 'personal' ? 'sm:col-span-2' : ''}>
                     <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
-                      {t.emailLabel}
+                      {c.emailLabel}
                     </label>
                     <input
                       type="email"
                       value={contactEmail}
                       onChange={(e) => setContactEmail(e.target.value)}
-                      placeholder={t.emailPlaceholder}
+                      placeholder={c.emailPlaceholder}
                       className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
                     />
                   </div>
@@ -1118,133 +1551,165 @@ export default function App() {
               </div>
             )}
 
-            {/* ==================== STEP 2: BÀI TOÁN & Ý TƯỞNG (GÕ PHÍM HOẶC GHI ÂM GIỌNG NÓI) ==================== */}
+            {/* ==================== STEP 2/3: CHỈ GHI NHẬN MONG MUỐN (GHI ÂM RA TEXT / GỢI Ý ẨN-HIỆN / CHATBOX) ==================== */}
             {step === 2 && (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div>
-                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                    {wiz.q2Title}
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    {c.s2Title}
                   </h2>
-                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q2Sub}</p>
+                  <p className="text-base sm:text-lg text-slate-600 mt-1">{c.s2Sub}</p>
                 </div>
 
-                {/* Pain Points (Chữ to) */}
-                <div>
-                  <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
-                    {t.painPointsLabel}
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {t.painPointsOptions.map((item, idx) => {
-                      const active = painPointsIdx.includes(idx);
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => toggleIndex(painPointsIdx, setPainPointsIdx, idx)}
-                          className={`text-left text-base sm:text-lg font-semibold px-4 py-3 rounded-2xl border-2 transition flex items-center gap-3 ${
-                            active
-                              ? 'bg-amber-50 border-amber-600 text-slate-950 font-bold shadow-sm'
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-400'
-                          }`}
-                        >
-                          <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
-                              active ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-600'
-                            }`}
-                          >
-                            {active ? '✓' : '+'}
-                          </span>
-                          <span>{item}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Expected Goals (Chữ to) */}
-                <div>
-                  <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
-                    {t.goalsLabel}
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {t.goalsOptions.map((item, idx) => {
-                      const active = goalsIdx.includes(idx);
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => toggleIndex(goalsIdx, setGoalsIdx, idx)}
-                          className={`text-left text-base sm:text-lg font-semibold px-4 py-3 rounded-2xl border-2 transition flex items-center gap-3 ${
-                            active
-                              ? 'bg-emerald-50 border-emerald-600 text-emerald-950 font-bold shadow-sm'
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-400'
-                          }`}
-                        >
-                          <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
-                              active ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
-                            }`}
-                          >
-                            {active ? '✓' : '+'}
-                          </span>
-                          <span>{item}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Big Conversational Answer Box + Prominent Voice Answer Button */}
-                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-                    <label className="text-base sm:text-xl font-extrabold text-slate-900">
-                      {t.customNoteLabel}
-                    </label>
+                {/* Big Action Bar: 1. Voice Record (Auto to Text) | 2. Toggle Suggestions | 3. Open Chatbox */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {!isRecording ? (
                     <button
                       type="button"
-                      onClick={() => toggleFieldDictation('customNote', setCustomNote)}
-                      className={`text-sm sm:text-base font-extrabold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition ${
-                        dictatingField === 'customNote'
-                          ? 'bg-rose-600 text-white animate-pulse'
-                          : 'bg-slate-900 text-amber-300 hover:bg-slate-800'
-                      }`}
+                      onClick={startVoiceToTextRecording}
+                      className="flex-1 min-w-[240px] py-4 px-5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-base sm:text-lg shadow-lg flex items-center justify-center gap-2.5 transition"
                     >
-                      <Mic className="w-5 h-5" />
+                      <Mic className="w-6 h-6 shrink-0" />
+                      <span>{c.voiceRecordBtn}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={stopVoiceToTextRecording}
+                      className="flex-1 min-w-[240px] py-4 px-5 rounded-2xl bg-slate-900 text-amber-300 border-2 border-rose-500 font-extrabold text-base sm:text-lg shadow-xl flex items-center justify-center gap-2.5 animate-pulse"
+                    >
+                      <Square className="w-6 h-6 fill-rose-500 text-rose-500 shrink-0" />
                       <span>
-                        {dictatingField === 'customNote'
-                          ? wiz.voiceListening
-                          : wiz.voiceAnswerBtn}
+                        {c.voiceRecordingActive} ({formatDuration(recordingSeconds)})
                       </span>
                     </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowSuggestions(!showSuggestions)}
+                    className={`py-4 px-5 rounded-2xl border-2 font-extrabold text-base sm:text-lg flex items-center gap-2 transition ${
+                      showSuggestions
+                        ? 'bg-amber-100 border-amber-500 text-slate-950'
+                        : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-950'
+                    }`}
+                  >
+                    <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
+                    <span>{showSuggestions ? c.hideSuggestionsBtn : c.toggleSuggestionsBtn}</span>
+                    {showSuggestions ? (
+                      <ChevronUp className="w-5 h-5" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5" />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setChatOpen(true)}
+                    className="py-4 px-5 rounded-2xl bg-sky-50 hover:bg-sky-100 border-2 border-sky-300 text-sky-950 font-extrabold text-base sm:text-lg flex items-center gap-2 transition"
+                  >
+                    <Bot className="w-6 h-6 text-sky-600 shrink-0" />
+                    <span>{c.openChatboxBtn}</span>
+                  </button>
+                </div>
+
+                {/* Expandable Sample Answers (HIDDEN BY DEFAULT SO IT DOES NOT CLUTTER THE SCREEN!) */}
+                {showSuggestions && (
+                  <div className="p-4 rounded-2xl bg-amber-50/70 border-2 border-amber-200 space-y-2 animate-fadeIn">
+                    <div className="text-sm sm:text-base font-bold text-amber-900 mb-1">
+                      Chạm vào câu gợi ý bất kỳ để tự động điền vào ô mong muốn bên dưới:
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {c.suggestionsList.map((item, idx) => {
+                        const active = selectedSuggestionsIdx.includes(idx);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleToggleSuggestion(idx)}
+                            className={`text-left text-base font-semibold px-4 py-3 rounded-xl border-2 transition flex items-start gap-2.5 ${
+                              active
+                                ? 'bg-slate-900 text-amber-300 border-slate-900 font-bold shadow'
+                                : 'bg-white text-slate-800 border-slate-200 hover:border-amber-400'
+                            }`}
+                          >
+                            <span className="font-bold shrink-0">{active ? '✓' : '+'}</span>
+                            <span>{item}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+
+                {/* Live Voice-to-Text Indicator */}
+                {isRecording && (
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-base font-semibold flex items-center gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-rose-600 animate-ping shrink-0" />
+                    <div>
+                      <div>{c.voiceConvertingNote}</div>
+                      {liveTranscript && (
+                        <div className="text-slate-900 font-bold italic mt-1">
+                          &quot;{liveTranscript}...&quot;
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Clean Wish Textarea */}
+                <div>
+                  <label className="block text-base sm:text-xl font-extrabold text-slate-900 mb-2">
+                    {c.wishLabel}
+                  </label>
                   <textarea
-                    rows={3}
-                    value={customNote}
-                    onChange={(e) => setCustomNote(e.target.value)}
-                    placeholder={t.customNotePlaceholder}
-                    className="w-full bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl p-4 text-base sm:text-xl font-medium text-slate-900 placeholder-slate-400 outline-none resize-none transition"
+                    rows={4}
+                    value={wishText}
+                    onChange={(e) => setWishText(e.target.value)}
+                    placeholder={c.wishPlaceholder}
+                    className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl p-4 text-lg sm:text-xl font-medium text-slate-900 placeholder-slate-400 outline-none resize-none transition leading-relaxed"
                   />
                 </div>
+
+                {/* Audio playback if recorded */}
+                {audioUrl && (
+                  <div className="p-3 rounded-2xl bg-slate-100 border border-slate-300 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-[200px]">
+                      <Volume2 className="w-5 h-5 text-rose-600 shrink-0" />
+                      <span className="text-sm font-bold text-slate-700">File ghi âm đính kèm:</span>
+                      <audio src={audioUrl} controls className="h-9 w-full max-w-xs" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAudioUrl(null);
+                        setAudioBlob(null);
+                      }}
+                      className="text-xs font-bold text-rose-600 hover:underline px-2 py-1"
+                    >
+                      Xóa file âm thanh
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* ==================== STEP 3: NGÔN NGỮ LỰA CHỌN & TÍNH NĂNG KỸ THUẬT ==================== */}
+            {/* ==================== STEP 3/3: GỘP GỌN PHẦN 3-4-5 TRONG 1 TRANG DUY NHẤT ==================== */}
             {step === 3 && (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div>
-                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                    {wiz.q3Title}
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    {c.s3Title}
                   </h2>
-                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q3Sub}</p>
+                  <p className="text-base sm:text-lg text-slate-600 mt-1">{c.s3Sub}</p>
                 </div>
 
-                {/* 5 Target App Languages (Việt, Anh, Hoa, Nhật, Hàn) - Big Buttons */}
-                <div className="bg-amber-50/70 border-2 border-amber-300 rounded-2xl p-4 sm:p-5">
-                  <label className="block text-base sm:text-xl font-extrabold text-slate-900 mb-3 flex items-center gap-2">
-                    <Languages className="w-6 h-6 text-amber-700" />
-                    <span>{t.appLangLabel}</span>
+                {/* 1. Target Languages (Việt, Anh, Hoa, Nhật, Hàn) */}
+                <div className="bg-amber-50/60 border-2 border-amber-200 rounded-2xl p-4">
+                  <label className="block text-base sm:text-lg font-extrabold text-slate-900 mb-2.5">
+                    {c.appLangLabel}
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     {appLangOptions.map((label, idx) => {
                       const active = selectedAppLangsIdx.includes(idx);
                       return (
@@ -1254,9 +1719,9 @@ export default function App() {
                           onClick={() =>
                             toggleIndex(selectedAppLangsIdx, setSelectedAppLangsIdx, idx)
                           }
-                          className={`text-base sm:text-lg font-bold py-3.5 px-3 rounded-2xl border-2 transition flex items-center justify-center gap-2 ${
+                          className={`text-sm sm:text-base font-bold py-3 px-3 rounded-xl border-2 transition flex items-center justify-center gap-1.5 ${
                             active
-                              ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md'
+                              ? 'bg-slate-900 text-amber-300 border-slate-900 shadow'
                               : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500'
                           }`}
                         >
@@ -1268,362 +1733,104 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Infrastructure & Core Features */}
-                <div>
-                  <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
-                    {t.infraLabel}
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {t.infraOptions.map((item, idx) => {
-                      const active = infraIdx.includes(idx);
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => toggleIndex(infraIdx, setInfraIdx, idx)}
-                          className={`text-left text-base sm:text-lg font-semibold px-4 py-3 rounded-2xl border-2 transition flex items-center gap-3 ${
-                            active
-                              ? 'bg-sky-50 border-sky-600 text-sky-950 font-bold shadow-sm'
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
-                          }`}
-                        >
-                          <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
-                              active ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'
-                            }`}
-                          >
-                            {active ? '✓' : '+'}
-                          </span>
-                          <span>{item}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Scale & Design Style */}
+                {/* 2 & 3. User Scope + Timeline side by side */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
-                      {t.scaleLabel}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900 mb-2">
+                      {c.userScopeLabel}
                     </label>
                     <div className="space-y-2">
-                      {t.scaleOptions.map((item, idx) => {
-                        const active = scaleIdx.includes(idx);
-                        return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => toggleIndex(scaleIdx, setScaleIdx, idx)}
-                            className={`w-full text-left text-base font-semibold px-4 py-2.5 rounded-xl border-2 transition flex items-center gap-2.5 ${
-                              active
-                                ? 'bg-slate-900 text-white border-slate-900 font-bold'
-                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
-                            }`}
-                          >
-                            <span>{active ? '✓' : '+'}</span>
-                            <span>{item}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
-                        {t.styleLabel}
-                      </label>
-                      <div className="space-y-2">
-                        {t.styleOptions.map((st, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => setStyleIdx(idx)}
-                            className={`w-full text-left text-base font-semibold px-4 py-2.5 rounded-xl border-2 transition flex items-center justify-between ${
-                              styleIdx === idx
-                                ? 'bg-amber-50 border-amber-600 text-slate-950 font-bold'
-                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
-                            }`}
-                          >
-                            <span>{st}</span>
-                            {styleIdx === idx && (
-                              <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ==================== STEP 4: PHÂN QUYỀN NGƯỜI DÙNG & TIẾN ĐỘ ==================== */}
-            {step === 4 && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                    {wiz.q4Title}
-                  </h2>
-                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q4Sub}</p>
-                </div>
-
-                {/* Roles Cards (Chữ to, dễ bấm) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {roleStates.map((role, idx) => {
-                    const trans = t.defaultRoles[idx];
-                    const displayPerm = role.customPermissions ?? trans?.permissions ?? '';
-                    return (
-                      <div
-                        key={role.id}
-                        className={`p-4 rounded-2xl border-2 transition ${
-                          role.enabled
-                            ? 'bg-white border-slate-900 shadow-md'
-                            : 'bg-slate-100 border-slate-200 opacity-60'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <label className="flex items-center gap-2.5 cursor-pointer text-base sm:text-lg font-extrabold text-slate-900">
-                            <input
-                              type="checkbox"
-                              checked={role.enabled}
-                              onChange={(e) => {
-                                const next = [...roleStates];
-                                next[idx].enabled = e.target.checked;
-                                setRoleStates(next);
-                              }}
-                              className="accent-slate-900 w-5 h-5 rounded"
-                            />
-                            <span>{trans?.name}</span>
-                          </label>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs sm:text-sm font-semibold text-slate-500">
-                              {t.roleQtyLabel}
-                            </span>
-                            <input
-                              type="text"
-                              value={role.count}
-                              onChange={(e) => {
-                                const next = [...roleStates];
-                                next[idx].count = e.target.value;
-                                setRoleStates(next);
-                              }}
-                              className="w-24 bg-slate-100 border border-slate-300 rounded-xl px-2.5 py-1 text-sm sm:text-base font-bold text-slate-900 text-center outline-none"
-                            />
-                          </div>
-                        </div>
-                        <input
-                          type="text"
-                          value={displayPerm}
-                          onChange={(e) => {
-                            const next = [...roleStates];
-                            next[idx].customPermissions = e.target.value;
-                            setRoleStates(next);
-                          }}
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-2 text-sm sm:text-base text-slate-700 outline-none"
-                          placeholder={t.rolePermPlaceholder}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Timeline & Security */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div>
-                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
-                      {t.timelineLabel}
-                    </label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {t.timelineOptions.map((item, idx) => (
+                      {c.userScopeOptions.map((opt, idx) => (
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => setTimelineIdx(idx)}
-                          className={`text-left text-base sm:text-lg font-bold px-4 py-3 rounded-2xl border-2 transition flex items-center justify-between ${
-                            timelineIdx === idx
-                              ? 'bg-amber-50 border-amber-600 text-slate-950 shadow-sm'
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
+                          onClick={() => setUserScopeIdx(idx)}
+                          className={`w-full text-left text-base font-bold px-3.5 py-2.5 rounded-xl border-2 transition flex items-center justify-between ${
+                            userScopeIdx === idx
+                              ? 'bg-slate-900 text-amber-300 border-slate-900'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
                           }`}
                         >
-                          <span>{item}</span>
-                          {timelineIdx === idx && (
-                            <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
-                          )}
+                          <span>{opt}</span>
+                          {userScopeIdx === idx && <Check className="w-5 h-5 shrink-0" />}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
-                      {t.securityLabel}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900 mb-2">
+                      {c.timelineLabel}
                     </label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {t.securityOptions.map((item, idx) => {
-                        const active = securityIdx.includes(idx);
-                        return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => toggleIndex(securityIdx, setSecurityIdx, idx)}
-                            className={`text-left text-base sm:text-lg font-semibold px-4 py-3 rounded-2xl border-2 transition flex items-center gap-3 ${
-                              active
-                                ? 'bg-emerald-50 border-emerald-600 text-emerald-950 font-bold'
-                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
-                            }`}
-                          >
-                            <span>{active ? '✓' : '+'}</span>
-                            <span>{item}</span>
-                          </button>
-                        );
-                      })}
+                    <div className="space-y-2">
+                      {c.timelineOptions.map((opt, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setTimelineIdx(idx)}
+                          className={`w-full text-left text-base font-bold px-3.5 py-2.5 rounded-xl border-2 transition flex items-center justify-between ${
+                            timelineIdx === idx
+                              ? 'bg-slate-900 text-amber-300 border-slate-900'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                          }`}
+                        >
+                          <span>{opt}</span>
+                          {timelineIdx === idx && <Check className="w-5 h-5 shrink-0" />}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* ==================== STEP 5: GHI ÂM GIỌNG NÓI, CHỤP ẢNH MẪU & ĐÍNH KÈM ==================== */}
-            {step === 5 && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
-                    {wiz.q5Title}
-                  </h2>
-                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q5Sub}</p>
-                </div>
+                {/* 4. Compact Camera / File Attachment Bar */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                  <label className="block text-base sm:text-lg font-extrabold text-slate-900">
+                    {c.attachmentSectionLabel}
+                  </label>
 
-                {/* 3 Giant Action Cards: Record Voice | Camera Capture | Attach File */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Card 1: Voice Recording */}
-                  {!isRecording ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={startRecording}
-                      className="flex flex-col items-center justify-center gap-2.5 p-6 rounded-3xl bg-rose-50 hover:bg-rose-100/80 border-2 border-rose-300 text-rose-950 transition shadow-sm group"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="py-3.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-base flex items-center justify-center gap-2 shadow-sm transition"
                     >
-                      <div className="w-16 h-16 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
-                        <Mic className="w-8 h-8" />
-                      </div>
-                      <span className="text-lg sm:text-xl font-extrabold text-center">
-                        {t.recordVoiceTitle}
-                      </span>
-                      <span className="text-sm font-medium text-rose-700">
-                        {t.recordVoiceSub}
-                      </span>
+                      <Camera className="w-5 h-5" />
+                      <span>{c.cameraBtn}</span>
                     </button>
-                  ) : (
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleImageInputChange}
+                      className="hidden"
+                    />
+
                     <button
                       type="button"
-                      onClick={stopRecording}
-                      className="flex flex-col items-center justify-center gap-2.5 p-6 rounded-3xl bg-rose-600 text-white border-2 border-rose-700 animate-pulse shadow-xl"
+                      onClick={() => fileUploadRef.current?.click()}
+                      className="py-3.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-300 font-extrabold text-base flex items-center justify-center gap-2 transition"
                     >
-                      <Square className="w-12 h-12 fill-white" />
-                      <span className="text-xl font-extrabold">
-                        {t.stopRecordingBtn} ({formatDuration(recordingSeconds)})
-                      </span>
-                      <span className="text-sm">{t.recordingSub}</span>
+                      <Paperclip className="w-5 h-5 text-amber-600" />
+                      <span>{c.attachFileBtn}</span>
                     </button>
-                  )}
-
-                  {/* Card 2: Camera Capture */}
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center gap-2.5 p-6 rounded-3xl bg-sky-50 hover:bg-sky-100/80 border-2 border-sky-300 text-sky-950 transition shadow-sm group"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-sky-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
-                      <Camera className="w-8 h-8" />
-                    </div>
-                    <span className="text-lg sm:text-xl font-extrabold text-center">
-                      {t.cameraTitle}
-                    </span>
-                    <span className="text-sm font-medium text-sky-700">{t.cameraSub}</span>
-                  </button>
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleImageInputChange}
-                    className="hidden"
-                  />
-
-                  {/* Card 3: Attach Files */}
-                  <button
-                    type="button"
-                    onClick={() => fileUploadRef.current?.click()}
-                    className="flex flex-col items-center justify-center gap-2.5 p-6 rounded-3xl bg-amber-50 hover:bg-amber-100/80 border-2 border-amber-300 text-amber-950 transition shadow-sm group"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
-                      <Paperclip className="w-8 h-8" />
-                    </div>
-                    <span className="text-lg sm:text-xl font-extrabold text-center">
-                      {t.attachTitle}
-                    </span>
-                    <span className="text-sm font-medium text-amber-800">{t.attachSub}</span>
-                  </button>
-                  <input
-                    ref={fileUploadRef}
-                    type="file"
-                    multiple
-                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,audio/*"
-                    onChange={handleDocInputChange}
-                    className="hidden"
-                  />
-                </div>
-
-                {/* Audio Player if recorded */}
-                {audioUrl && (
-                  <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-[220px]">
-                      <Volume2 className="w-6 h-6 text-rose-600 shrink-0" />
-                      <audio src={audioUrl} controls className="h-10 w-full max-w-md" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={downloadVoiceRecording}
-                        className="text-sm font-bold px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 flex items-center gap-1.5"
-                      >
-                        <Download className="w-4 h-4" /> {t.downloadAudioBtn}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAudioUrl(null);
-                          setAudioBlob(null);
-                        }}
-                        className="p-2 text-rose-600 hover:bg-rose-100 rounded-xl"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
+                    <input
+                      ref={fileUploadRef}
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,audio/*"
+                      onChange={handleDocInputChange}
+                      className="hidden"
+                    />
                   </div>
-                )}
 
-                {/* Captured Images Preview */}
-                {capturedImages.length > 0 && (
-                  <div className="p-4 rounded-2xl bg-sky-50/60 border-2 border-sky-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-base font-bold text-sky-900 flex items-center gap-2">
-                        <ImageIcon className="w-5 h-5" /> {t.capturedImagesLabel}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => photoUploadRef.current?.click()}
-                        className="text-sm font-bold text-sky-700 underline"
-                      >
-                        {t.addMorePhotoBtn}
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Thumbnails if captured */}
+                  {capturedImages.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                       {capturedImages.map((img) => (
                         <div
                           key={img.id}
-                          className="relative h-24 rounded-xl overflow-hidden border-2 border-white shadow bg-white"
+                          className="relative h-20 rounded-xl overflow-hidden border border-slate-300 bg-white"
                         >
                           <img
                             src={img.dataUrl}
@@ -1635,100 +1842,76 @@ export default function App() {
                             onClick={() =>
                               setCapturedImages((prev) => prev.filter((i) => i.id !== img.id))
                             }
-                            className="absolute top-1 right-1 bg-slate-900/80 text-white rounded-full p-1"
+                            className="absolute top-1 right-1 bg-slate-900/80 text-white rounded-full p-0.5"
                           >
                             <X className="w-4 h-4" />
                           </button>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-                <input
-                  ref={photoUploadRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageInputChange}
-                  className="hidden"
-                />
+                  )}
+                  <input
+                    ref={photoUploadRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageInputChange}
+                    className="hidden"
+                  />
 
-                {/* Attached Docs List */}
-                {attachedDocs.length > 0 && (
-                  <div className="space-y-2">
-                    {attachedDocs.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between text-base font-semibold bg-slate-100 border border-slate-300 px-4 py-2.5 rounded-xl"
-                      >
-                        <span className="truncate flex items-center gap-2 text-slate-800">
-                          <FileText className="w-5 h-5 text-amber-700 shrink-0" />
-                          {doc.name} <span className="text-slate-500">({doc.size})</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setAttachedDocs((prev) => prev.filter((d) => d.id !== doc.id))
-                          }
-                          className="text-slate-500 hover:text-rose-600 ml-2"
+                  {/* Attached Docs */}
+                  {attachedDocs.length > 0 && (
+                    <div className="space-y-1.5">
+                      {attachedDocs.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between text-sm font-semibold bg-white border border-slate-200 px-3 py-2 rounded-xl"
                         >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Reference Link & Existing Doc Checkboxes */}
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    {t.docTypesOptions.map((item, idx) => {
-                      const active = docTypesIdx.includes(idx);
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => toggleIndex(docTypesIdx, setDocTypesIdx, idx)}
-                          className={`text-sm sm:text-base font-semibold px-3.5 py-2 rounded-xl border transition ${
-                            active
-                              ? 'bg-slate-900 text-amber-300 border-slate-900 font-bold'
-                              : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-white'
-                          }`}
-                        >
-                          {active ? '✓ ' : '+ '}
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
+                          <span className="truncate flex items-center gap-2 text-slate-800">
+                            <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                            {doc.name} ({doc.size})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAttachedDocs((prev) => prev.filter((d) => d.id !== doc.id))
+                            }
+                            className="text-slate-400 hover:text-rose-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <input
                     type="url"
                     value={referenceLink}
                     onChange={(e) => setReferenceLink(e.target.value)}
-                    placeholder={t.refLinkPlaceholder}
-                    className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-medium text-slate-900 placeholder-slate-400 outline-none"
+                    placeholder={c.refLinkPlaceholder}
+                    className="w-full bg-white border border-slate-300 focus:border-slate-900 rounded-xl px-3.5 py-2.5 text-base text-slate-900 placeholder-slate-400 outline-none"
                   />
                 </div>
               </div>
             )}
 
-            {/* ==================== STEP 6: MÀN HÌNH HOÀN THÀNH & BẤM IN PHIẾU YÊU CẦU ==================== */}
-            {step === 6 && (
+            {/* ==================== STEP 4: HOÀN THÀNH & BẤM IN PHIẾU YÊU CẦU ==================== */}
+            {step === 4 && (
               <div className="space-y-6">
                 <div className="text-center space-y-2 pb-2 border-b border-slate-200">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 mb-1">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-700">
                     <CheckCheck className="w-10 h-10" />
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-                    {wiz.doneTitle}
+                    {c.doneTitle}
                   </h2>
                   <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
-                    {wiz.doneSub}
+                    {c.doneSub}
                   </p>
                 </div>
 
-                {/* GIANT PRIMARY CTA: IN PHIẾU YÊU CẦU (1 TRANG A4) & TẢI PDF */}
+                {/* GIANT PRINT A4 & DOWNLOAD PDF BUTTONS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button
                     type="button"
@@ -1736,7 +1919,7 @@ export default function App() {
                     className="py-5 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold text-lg sm:text-xl shadow-xl flex items-center justify-center gap-3 transition transform hover:-translate-y-0.5"
                   >
                     <Printer className="w-7 h-7 shrink-0" />
-                    <span>{wiz.printNowBigBtn}</span>
+                    <span>{c.printBigBtn}</span>
                   </button>
 
                   <button
@@ -1746,13 +1929,11 @@ export default function App() {
                     className="py-5 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-lg sm:text-xl shadow-xl flex items-center justify-center gap-3 transition transform hover:-translate-y-0.5"
                   >
                     <FileDown className="w-7 h-7 shrink-0" />
-                    <span>
-                      {isGeneratingPdf ? t.generatingPdf : `${t.downloadPdfBtn} (1 Trang A4)`}
-                    </span>
+                    <span>{isGeneratingPdf ? '...' : c.downloadPdfBtn}</span>
                   </button>
                 </div>
 
-                {/* Secondary Actions: Send Email, Send Zalo, Preview A4 */}
+                {/* Send Email / Zalo / Preview A4 */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     type="button"
@@ -1761,7 +1942,7 @@ export default function App() {
                   >
                     <Mail className="w-6 h-6 shrink-0" />
                     <div className="text-left leading-tight">
-                      <div>{t.sendEmailBtn}</div>
+                      <div>{c.sendEmailBtn}</div>
                       <div className="text-xs font-medium opacity-90">anhpob@gmail.com</div>
                     </div>
                   </button>
@@ -1773,7 +1954,7 @@ export default function App() {
                   >
                     <MessageCircle className="w-6 h-6 shrink-0" />
                     <div className="text-left leading-tight">
-                      <div>{t.sendZaloBtn}</div>
+                      <div>{c.sendZaloBtn}</div>
                       <div className="text-xs font-semibold opacity-90">+84 908 095693</div>
                     </div>
                   </button>
@@ -1784,58 +1965,56 @@ export default function App() {
                     className="py-4 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 border-2 border-slate-300 font-extrabold text-base sm:text-lg flex items-center justify-center gap-2 transition"
                   >
                     <Eye className="w-6 h-6 text-slate-700" />
-                    <span>{t.previewA4Btn}</span>
+                    <span>{c.previewA4Btn}</span>
                   </button>
                 </div>
 
-                {/* Compact Readable Summary Card with Quick Edit Buttons */}
-                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 text-base">
+                {/* Clean Summary Box */}
+                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-5 space-y-2.5 text-base">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                     <span className="font-extrabold text-slate-900 text-lg">
-                      📋 Tóm tắt thông tin bạn đã chọn:
+                      📋 Tóm tắt Phiếu Yêu Cầu của bạn:
                     </span>
                     <button
                       type="button"
                       onClick={() => setStep(1)}
                       className="text-sm font-bold text-amber-800 hover:underline flex items-center gap-1"
                     >
-                      <Edit3 className="w-4 h-4" /> {wiz.editBtn}
+                      <Edit3 className="w-4 h-4" /> {c.editBtn}
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm sm:text-base">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-base">
                     <div>
-                      <span className="text-slate-500 font-medium">{t.projectLabel}: </span>
-                      <strong className="text-slate-900">{projectName || '---'}</strong>
+                      <span className="text-slate-500">Mục đích: </span>
+                      <strong className="text-slate-900">{usageLabelText}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-500 font-medium">{t.contactLabel} / SĐT: </span>
+                      <span className="text-slate-500">Liên hệ: </span>
                       <strong className="text-slate-900">
                         {contactName || companyName || '---'} ({contactPhone || '---'})
                       </strong>
                     </div>
                     <div>
-                      <span className="text-slate-500 font-medium">🌐 Ngôn ngữ Web App: </span>
+                      <span className="text-slate-500">Ngôn ngữ App: </span>
                       <strong className="text-amber-800">{selectedAppLangs.join(', ')}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-500 font-medium">Tiến độ & Giao diện: </span>
-                      <strong className="text-slate-900">
-                        {selectedTimeline} • {selectedStyle}
-                      </strong>
+                      <span className="text-slate-500">Tiến độ: </span>
+                      <strong className="text-slate-900">{selectedTimeline}</strong>
                     </div>
-                    <div className="md:col-span-2">
-                      <span className="text-slate-500 font-medium">Mục tiêu & Ý tưởng: </span>
-                      <strong className="text-slate-900">
-                        {[...selectedGoals, customNote].filter(Boolean).join(' — ') || '---'}
-                      </strong>
+                    <div className="sm:col-span-2 pt-1 border-t border-slate-200/80">
+                      <span className="text-slate-500 block mb-0.5">Mong muốn &amp; Yêu cầu riêng:</span>
+                      <div className="font-bold text-slate-900 whitespace-pre-line">
+                        {wishText || 'Trao đổi trực tiếp khi nhân viên gọi lại'}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* BOTTOM NAVIGATION BAR INSIDE INTERVIEW CARD */}
+            {/* BOTTOM NAVIGATION BAR */}
             <div className="mt-7 pt-4 border-t-2 border-slate-100 flex flex-wrap items-center justify-between gap-3">
               <div>
                 {step > 1 ? (
@@ -1845,7 +2024,7 @@ export default function App() {
                     className="text-base sm:text-lg font-bold px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-2 transition"
                   >
                     <ArrowLeft className="w-5 h-5" />
-                    <span>{wiz.prevBtn}</span>
+                    <span>{c.prevBtn}</span>
                   </button>
                 ) : (
                   <button
@@ -1854,41 +2033,41 @@ export default function App() {
                     className="text-sm font-semibold px-4 py-2.5 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 flex items-center gap-1.5 transition"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>{t.resetBtn}</span>
+                    <span>{c.resetBtn}</span>
                   </button>
                 )}
               </div>
 
               <div className="flex items-center gap-3">
-                {step < 6 && (
+                {step < 4 && (
                   <button
                     type="button"
-                    onClick={() => setStep(6)}
+                    onClick={() => setStep(4)}
                     className="text-sm sm:text-base font-bold px-4 py-3 rounded-2xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
                   >
-                    Đi tới Hoàn thành &amp; In A4 →
+                    Hoàn thành ngay →
                   </button>
                 )}
 
-                {step < 5 && (
+                {step < 3 && (
                   <button
                     type="button"
                     onClick={() => setStep(step + 1)}
-                    className="text-base sm:text-xl font-extrabold px-7 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 shadow-lg flex items-center gap-2.5 transition transform hover:translate-x-0.5"
+                    className="text-base sm:text-xl font-extrabold px-8 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 shadow-lg flex items-center gap-2.5 transition"
                   >
-                    <span>{wiz.nextBtn}</span>
+                    <span>{c.nextBtn}</span>
                     <ArrowRight className="w-6 h-6" />
                   </button>
                 )}
 
-                {step === 5 && (
+                {step === 3 && (
                   <button
                     type="button"
-                    onClick={() => setStep(6)}
-                    className="text-base sm:text-xl font-extrabold px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl flex items-center gap-2.5 transition transform hover:scale-105"
+                    onClick={() => setStep(4)}
+                    className="text-base sm:text-xl font-extrabold px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl flex items-center gap-2.5 transition"
                   >
                     <CheckCircle2 className="w-6 h-6" />
-                    <span>{wiz.finishBtn}</span>
+                    <span>{c.finishBtn}</span>
                   </button>
                 )}
               </div>
@@ -1897,8 +2076,124 @@ export default function App() {
         </main>
       </div>
 
+      {/* ==================== FLOATING SMART CHATBOX BUTTON & MODAL ==================== */}
+      <div className="no-print fixed bottom-5 right-5 z-40">
+        {!chatOpen ? (
+          <button
+            type="button"
+            onClick={() => setChatOpen(true)}
+            className="flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold text-sm sm:text-base shadow-2xl border-2 border-amber-400/60 transition transform hover:scale-105"
+          >
+            <Bot className="w-6 h-6 text-amber-300" />
+            <span>{c.openChatboxBtn}</span>
+          </button>
+        ) : (
+          <div className="w-[340px] sm:w-[400px] bg-white border-2 border-slate-300 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            {/* Chat Header */}
+            <div className="bg-slate-900 text-white px-4 py-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-sm text-amber-300">{c.chatTitle}</div>
+                  <div className="text-[11px] text-slate-300">{c.chatSub}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChatOpen(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Chat Messages */}
+            <div className="p-4 space-y-3 max-h-[280px] overflow-y-auto thin-scroll bg-slate-50">
+              {chatMessages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm sm:text-base leading-snug ${
+                      m.sender === 'user'
+                        ? 'bg-slate-900 text-amber-300 font-semibold'
+                        : 'bg-white border border-slate-200 text-slate-800 shadow-sm'
+                    }`}
+                  >
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Reply Chips inside Chatbox */}
+            <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex gap-1.5 overflow-x-auto thin-scroll">
+              {c.chatQuickReplies.map((qr, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSendChatMessage(qr)}
+                  className="text-xs font-bold px-3 py-1.5 rounded-full bg-white hover:bg-amber-50 text-slate-800 border border-slate-300 shrink-0 transition"
+                >
+                  + {qr}
+                </button>
+              ))}
+            </div>
+
+            {/* Chat Input + Voice Mic */}
+            <div className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleChatVoiceInput}
+                className={`p-2.5 rounded-xl border transition shrink-0 ${
+                  isChatRecording
+                    ? 'bg-rose-600 text-white border-rose-600 animate-pulse'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                }`}
+                title="Nói bằng giọng nói"
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSendChatMessage();
+                }}
+                placeholder={c.chatInputPlaceholder}
+                className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm sm:text-base text-slate-900 outline-none focus:border-slate-900"
+              />
+              <button
+                type="button"
+                onClick={() => handleSendChatMessage()}
+                className="p-2.5 rounded-xl bg-slate-900 text-amber-300 hover:bg-slate-800 shrink-0"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-3 pb-3 bg-white">
+              <button
+                type="button"
+                onClick={() => setChatOpen(false)}
+                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm"
+              >
+                ✓ {c.chatApplyBtn}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ==================== EXACT FOOTER FROM UNGDUNG.VERCEL.APP ==================== */}
-      <footer id="about" className="no-print bg-[#050B14] border-t border-amber-500/20 text-slate-300 text-sm">
+      <footer
+        id="about"
+        className="no-print bg-[#050B14] border-t border-amber-500/20 text-slate-300 text-sm"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-10">
             {/* Brand Col */}
@@ -2019,7 +2314,7 @@ export default function App() {
         </div>
       </footer>
 
-      {/* ==================== MODAL GỬI EMAIL / ZALO KÈM FILE ĐÍNH KÈM ==================== */}
+      {/* ==================== MODAL GỬI EMAIL / ZALO ==================== */}
       {sendModal.open && (
         <div className="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border-2 border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-900">
@@ -2056,7 +2351,7 @@ export default function App() {
                   </div>
                   {sendModal.channel === 'email' && sendModal.sendingCloud && (
                     <div className="text-xs sm:text-sm text-amber-800 mt-1">
-                      ⏳ Đang đồng thời gửi bản sao tự động tới <strong>anhpob@gmail.com</strong>...
+                      ⏳ Đang gửi tự động tới <strong>anhpob@gmail.com</strong>...
                     </div>
                   )}
                   {sendModal.channel === 'email' && sendModal.cloudSent && (
@@ -2067,7 +2362,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Step 1: Download PDF / Audio */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                 <div className="font-bold text-slate-900">
                   1. Tải File PDF (1 Trang A4) / Ghi âm để đính kèm:
@@ -2080,7 +2374,7 @@ export default function App() {
                     className="px-4 py-2 rounded-xl bg-slate-900 text-amber-300 font-bold flex items-center gap-2"
                   >
                     <FileDown className="w-4 h-4" />
-                    <span>{isGeneratingPdf ? t.generatingPdf : 'Tải PDF (1 Trang A4)'}</span>
+                    <span>{c.downloadPdfBtn}</span>
                   </button>
                   {audioUrl && (
                     <button
@@ -2089,7 +2383,7 @@ export default function App() {
                       className="px-4 py-2 rounded-xl bg-rose-100 text-rose-900 border border-rose-300 font-bold flex items-center gap-2"
                     >
                       <Download className="w-4 h-4" />
-                      <span>{t.downloadAudioBtn}</span>
+                      <span>Tải Ghi âm</span>
                     </button>
                   )}
                   <button
@@ -2098,16 +2392,15 @@ export default function App() {
                     className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold flex items-center gap-2"
                   >
                     <Share2 className="w-4 h-4" />
-                    <span>{t.quickShareBtn}</span>
+                    <span>Đính kèm nhanh</span>
                   </button>
                 </div>
               </div>
 
-              {/* Step 2: Open Email or Zalo */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                 <div className="font-bold text-slate-900">
                   {sendModal.channel === 'email'
-                    ? '2. Mở ứng dụng Email (Đã điền sẵn người nhận anhpob@gmail.com):'
+                    ? '2. Mở ứng dụng Email (Đã điền sẵn anhpob@gmail.com):'
                     : '2. Mở Zalo +84 908 095693 và nhấn Dán (Ctrl+V):'}
                 </div>
 
@@ -2164,14 +2457,14 @@ export default function App() {
                 }
                 className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-sm font-bold text-slate-800"
               >
-                {t.a4CloseBtn}
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================== MODAL XEM TRƯỚC TRANG IN A4 (VÀ KHU VỰC IN CHUẨN 1 TRANG A4) ==================== */}
+      {/* ==================== A4 PREVIEW & STRICT 1-PAGE A4 PRINT SHEET ==================== */}
       <div
         id="a4-print-wrapper"
         className={
@@ -2182,19 +2475,16 @@ export default function App() {
       >
         {showA4Preview && (
           <div className="no-print max-w-[210mm] w-full mb-3 flex flex-wrap items-center justify-between gap-2 bg-white border-2 border-slate-300 px-4 py-3 rounded-2xl shadow-xl">
-            <div className="flex items-center gap-2">
-              <span className="text-sm sm:text-base font-extrabold text-slate-900">
-                {t.a4PreviewBanner}
-              </span>
-              <span className="text-xs text-slate-500 hidden sm:inline">{t.a4PreviewSub}</span>
-            </div>
+            <span className="text-sm sm:text-base font-extrabold text-slate-900">
+              📄 Xem trước Bản In Chuẩn 1 Trang Giấy A4
+            </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handlePrintA4}
                 className="px-4 py-2 rounded-xl bg-slate-900 text-amber-300 font-bold text-sm flex items-center gap-1.5"
               >
-                <Printer className="w-4 h-4" /> {t.printA4Btn}
+                <Printer className="w-4 h-4" /> In A4
               </button>
               <button
                 type="button"
@@ -2202,276 +2492,154 @@ export default function App() {
                 disabled={isGeneratingPdf}
                 className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm flex items-center gap-1.5"
               >
-                <FileDown className="w-4 h-4" />{' '}
-                {isGeneratingPdf ? t.generatingPdf : t.downloadPdfBtn}
+                <FileDown className="w-4 h-4" /> Tải PDF
               </button>
               <button
                 type="button"
                 onClick={() => setShowA4Preview(false)}
                 className="px-4 py-2 rounded-xl bg-slate-200 text-slate-800 hover:bg-slate-300 text-sm font-bold flex items-center gap-1"
               >
-                <X className="w-4 h-4" /> {t.a4CloseBtn}
+                <X className="w-4 h-4" /> Đóng
               </button>
             </div>
           </div>
         )}
 
-        {/* ==================== THE ACTUAL 1-PAGE A4 SHEET ==================== */}
+        {/* THE ACTUAL 1-PAGE A4 SHEET (CLEAN, CONCISE, EXECUTIVE) */}
         <div
           id="a4-print-sheet"
           ref={a4SheetRef}
-          className="w-[198mm] bg-white text-slate-900 p-[6mm] rounded shadow-2xl border border-slate-300 text-[10.5px] leading-[1.35] font-sans"
+          className="w-[198mm] bg-white text-slate-900 p-[8mm] rounded shadow-2xl border border-slate-300 text-[12px] leading-[1.5] font-sans"
         >
           {/* A4 Header */}
-          <div className="flex items-center justify-between border-b-2 border-[#0C1B2E] pb-2 mb-2">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between border-b-2 border-[#0C1B2E] pb-3 mb-4">
+            <div className="flex items-center gap-3.5">
               <img
                 src="/logo-duyanhlab.jpg"
                 alt="Duy Anh Digital Lab"
-                className="h-12 w-auto rounded border border-slate-300 object-cover"
+                className="h-14 w-auto rounded border border-slate-300 object-cover"
               />
               <div>
-                <div className="text-[10px] font-extrabold tracking-widest text-[#0C1B2E] uppercase">
-                  DUY ANH LAB • DIGITAL — WEB APP &amp; AI SOLUTIONS
+                <div className="text-[11px] font-extrabold tracking-widest text-[#0C1B2E] uppercase">
+                  DUY ANH LAB • DIGITAL — REAL-WORLD SOFTWARE ENGINEERING
                 </div>
-                <h1 className="text-[14px] font-extrabold text-[#0C1B2E] uppercase tracking-tight">
-                  {t.a4MainTitle}
+                <h1 className="text-[16px] font-extrabold text-[#0C1B2E] uppercase tracking-tight mt-0.5">
+                  {c.a4MainTitle}
                 </h1>
-                <div className="text-[9.5px] text-slate-600">
-                  {t.a4HeaderSub} | {t.a4DateLabel}: <strong>{todayStr}</strong>
+                <div className="text-[10.5px] text-slate-600">
+                  {c.a4SubNote} | Ngày lập: <strong>{todayStr}</strong>
                 </div>
               </div>
             </div>
-            <div className="text-right text-[9.5px] bg-slate-100 border border-slate-300 rounded px-2.5 py-1.5">
-              <div className="font-bold text-[#0C1B2E]">{t.a4EcosystemTitle}</div>
-              <div className="font-mono text-[9px] text-slate-700">duy-anh-digital-lab.vercel.app</div>
-              <div className="font-mono text-[9px] text-slate-700">ungdung.vercel.app</div>
+            <div className="text-right text-[10px] bg-slate-100 border border-slate-300 rounded-lg px-3 py-2">
+              <div className="font-bold text-[#0C1B2E]">HỆ SINH THÁI WEB &amp; AI</div>
+              <div className="font-mono font-bold text-slate-800">ungdung.vercel.app</div>
+              <div className="font-mono text-slate-600">yeucau.vercel.app</div>
             </div>
           </div>
 
-          {/* 1. THÔNG TIN CHUNG */}
-          <div className="mb-2">
-            <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              {t.a4Sec1Title}
+          {/* 1. THÔNG TIN LIÊN HỆ & MỤC ĐÍCH */}
+          <div className="mb-4">
+            <div className="bg-[#0C1B2E] text-white font-bold text-[11.5px] px-3 py-1 rounded-t uppercase tracking-wide">
+              {c.a4Sec1}
             </div>
-            <div className="border border-slate-300 rounded-b p-2 grid grid-cols-2 gap-x-4 gap-y-1 bg-slate-50/40">
-              <div>
-                <span className="font-semibold text-slate-700">{t.companyLabel}: </span>
-                <span className="font-bold text-slate-950">
-                  {companyName || '............................................................'}
-                </span>
+            <div className="border border-slate-300 rounded-b p-3 grid grid-cols-2 gap-x-6 gap-y-2 bg-slate-50/50 text-[12px]">
+              <div className="col-span-2">
+                <span className="font-semibold text-slate-700">• Mục đích sử dụng: </span>
+                <span className="font-extrabold text-[#0C1B2E] text-[13px]">{usageLabelText}</span>
               </div>
               <div>
-                <span className="font-semibold text-slate-700">{t.projectLabel}: </span>
-                <span className="font-bold text-slate-950">
-                  {projectName || '............................................................'}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold text-slate-700">{t.contactLabel}: </span>
+                <span className="font-semibold text-slate-700">• Người liên hệ: </span>
                 <span className="font-bold text-slate-950">
                   {contactName || '............................................................'}
                 </span>
               </div>
               <div>
-                <span className="font-semibold text-slate-700">{t.phoneLabel}: </span>
+                <span className="font-semibold text-slate-700">• Số điện thoại / Zalo: </span>
                 <span className="font-bold text-slate-950">
-                  {contactPhone || '..............................'}
-                  {contactEmail ? ` | ${contactEmail}` : ''}
+                  {contactPhone || '............................................................'}
                 </span>
               </div>
-              <div className="col-span-2">
-                <span className="font-semibold text-slate-700">{t.timelineLabel} </span>
-                <span className="font-bold text-[#0C1B2E]">{selectedTimeline}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 2. HIỆN TRẠNG & BÀI TOÁN CẦN GIẢI QUYẾT */}
-          <div className="mb-2">
-            <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              {t.a4Sec2Title}
-            </div>
-            <div className="border border-slate-300 rounded-b p-2 space-y-1.5">
               <div>
-                <div className="font-semibold text-slate-800 mb-0.5">• {t.painPointsLabel}</div>
-                <div className="grid grid-cols-3 gap-1 text-[9.5px]">
-                  {t.painPointsOptions.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-1">
-                      <span className="font-mono font-bold text-slate-900">
-                        {painPointsIdx.includes(idx) ? '[✓]' : '[ ]'}
-                      </span>
-                      <span
-                        className={
-                          painPointsIdx.includes(idx) ? 'font-bold text-slate-950' : 'text-slate-600'
-                        }
-                      >
-                        {item}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <span className="font-semibold text-slate-700">• Công ty / Đơn vị: </span>
+                <span className="font-bold text-slate-950">
+                  {companyName || '............................................................'}
+                </span>
               </div>
-
               <div>
-                <div className="font-semibold text-slate-800 mb-0.5">• {t.goalsLabel}</div>
-                <div className="grid grid-cols-3 gap-1 text-[9.5px]">
-                  {t.goalsOptions.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-1">
-                      <span className="font-mono font-bold text-slate-900">
-                        {goalsIdx.includes(idx) ? '[✓]' : '[ ]'}
-                      </span>
-                      <span
-                        className={
-                          goalsIdx.includes(idx) ? 'font-bold text-slate-950' : 'text-slate-600'
-                        }
-                      >
-                        {item}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-1 border-t border-dashed border-slate-300">
-                <span className="font-semibold text-slate-800">• {t.customNoteLabel} </span>
-                <span className="text-slate-950 font-medium">
-                  {customNote ||
-                    '................................................................................................................................................................................'}
+                <span className="font-semibold text-slate-700">• Email: </span>
+                <span className="font-bold text-slate-950">
+                  {contactEmail || '............................................................'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 3. YÊU CẦU KỸ THUẬT, NGÔN NGỮ & TÍNH NĂNG CỐT LÕI */}
-          <div className="mb-2">
-            <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              {t.a4Sec3Title}
+          {/* 2. MONG MUỐN & YÊU CẦU RIÊNG */}
+          <div className="mb-4">
+            <div className="bg-[#0C1B2E] text-white font-bold text-[11.5px] px-3 py-1 rounded-t uppercase tracking-wide">
+              {c.a4Sec2}
             </div>
-            <div className="border border-slate-300 rounded-b p-2">
-              <div className="grid grid-cols-3 gap-2 text-[9.5px]">
-                <div className="border-r border-slate-200 pr-2">
-                  <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColInfra}</div>
-                  {t.infraOptions.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-1 mb-0.5">
-                      <span className="font-mono font-bold">
-                        {infraIdx.includes(idx) ? '[✓]' : '[ ]'}
-                      </span>
-                      <span className={infraIdx.includes(idx) ? 'font-bold' : ''}>{item}</span>
-                    </div>
-                  ))}
+            <div className="border border-slate-300 rounded-b p-3.5 min-h-[110px] bg-white">
+              {wishText ? (
+                <div className="text-[12.5px] font-semibold text-slate-900 whitespace-pre-line leading-relaxed">
+                  {wishText}
                 </div>
-
-                <div className="border-r border-slate-200 pr-2">
-                  <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColScale}</div>
-                  {t.scaleOptions.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-1 mb-0.5">
-                      <span className="font-mono font-bold">
-                        {scaleIdx.includes(idx) ? '[✓]' : '[ ]'}
-                      </span>
-                      <span className={scaleIdx.includes(idx) ? 'font-bold' : ''}>{item}</span>
-                    </div>
-                  ))}
-                  <div className="mt-1 pt-1 border-t border-slate-200">
-                    <span className="font-bold text-[#0C1B2E] block mb-0.5">
-                      🌐 {t.appLangLabel}
-                    </span>
-                    <div className="font-bold text-slate-900">
-                      {selectedAppLangs.join(' • ') || '🇻🇳 Tiếng Việt'}
-                    </div>
-                  </div>
+              ) : (
+                <div className="text-slate-400 space-y-2">
+                  <div>.......................................................................................................................................................................................</div>
+                  <div>.......................................................................................................................................................................................</div>
+                  <div>.......................................................................................................................................................................................</div>
                 </div>
+              )}
+            </div>
+          </div>
 
+          {/* 3. NGÔN NGỮ, ĐỐI TƯỢNG SỬ DỤNG & TIẾN ĐỘ */}
+          <div className="mb-4">
+            <div className="bg-[#0C1B2E] text-white font-bold text-[11.5px] px-3 py-1 rounded-t uppercase tracking-wide">
+              {c.a4Sec3}
+            </div>
+            <div className="border border-slate-300 rounded-b p-3 space-y-2 text-[11.5px]">
+              <div>
+                <span className="font-semibold text-slate-700">• Ngôn ngữ tích hợp trên Web App: </span>
+                <span className="font-extrabold text-[#0C1B2E]">
+                  {selectedAppLangs.join('  |  ') || '🇻🇳 Tiếng Việt'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-1 border-t border-slate-200">
                 <div>
-                  <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColSec}</div>
-                  {t.securityOptions.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-1 mb-0.5">
-                      <span className="font-mono font-bold">
-                        {securityIdx.includes(idx) ? '[✓]' : '[ ]'}
-                      </span>
-                      <span className={securityIdx.includes(idx) ? 'font-bold' : ''}>{item}</span>
-                    </div>
-                  ))}
-                  <div className="mt-1 pt-1 border-t border-slate-200">
-                    <span className="font-semibold">{t.styleLabel} </span>
-                    <span className="font-bold">{selectedStyle}</span>
-                  </div>
+                  <span className="font-semibold text-slate-700">• Đối tượng sử dụng chính: </span>
+                  <span className="font-bold text-slate-950">{selectedScope}</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-700">• Thời gian mong muốn: </span>
+                  <span className="font-bold text-slate-950">{selectedTimeline}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 4. PHÂN QUYỀN NGƯỜI DÙNG (ROLES & PERMISSIONS) */}
-          <div className="mb-2">
-            <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              {t.a4Sec4Title}
+          {/* 4. HÌNH ẢNH MẪU, GHI ÂM & TÀI LIỆU ĐÍNH KÈM */}
+          <div className="mb-4">
+            <div className="bg-[#0C1B2E] text-white font-bold text-[11.5px] px-3 py-1 rounded-t uppercase tracking-wide">
+              {c.a4Sec4}
             </div>
-            <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
-              <thead>
-                <tr className="bg-slate-100 text-slate-800">
-                  <th className="border border-slate-300 px-2 py-1 text-left w-1/4">
-                    {t.a4RoleCol}
-                  </th>
-                  <th className="border border-slate-300 px-2 py-1 text-center w-24">
-                    {t.a4QtyCol}
-                  </th>
-                  <th className="border border-slate-300 px-2 py-1 text-left">{t.a4PermCol}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roleStates.map((r, idx) => {
-                  const trans = t.defaultRoles[idx];
-                  const perm = r.customPermissions ?? trans?.permissions ?? '';
-                  return (
-                    <tr key={r.id}>
-                      <td className="border border-slate-300 px-2 py-1 font-semibold">
-                        <span className="font-mono mr-1">{r.enabled ? '[✓]' : '[ ]'}</span>
-                        {trans?.name}
-                      </td>
-                      <td className="border border-slate-300 px-2 py-1 text-center font-medium">
-                        {r.enabled ? `${r.count}` : '---'}
-                      </td>
-                      <td className="border border-slate-300 px-2 py-1 text-slate-700">
-                        {r.enabled ? perm : t.a4NotUsed}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* 5. TÀI LIỆU ĐÍNH KÈM, GHI ÂM & HÌNH ẢNH MẪU */}
-          <div className="mb-2">
-            <div className="bg-[#0C1B2E] text-white font-bold text-[10.5px] px-2 py-0.5 rounded-t uppercase tracking-wide">
-              {t.a4Sec5Title}
-            </div>
-            <div className="border border-slate-300 rounded-b p-2 space-y-1 text-[9.5px]">
-              <div className="grid grid-cols-3 gap-1">
-                {t.docTypesOptions.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-1">
-                    <span className="font-mono font-bold">
-                      {docTypesIdx.includes(idx) ? '[✓]' : '[ ]'}
-                    </span>
-                    <span className={docTypesIdx.includes(idx) ? 'font-bold' : ''}>{item}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200">
+            <div className="border border-slate-300 rounded-b p-3 space-y-2 text-[11px]">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="font-semibold">{t.a4AudioAndFiles}</span>
-                  <span>
-                    {audioUrl ? `Voice (${formatDuration(recordingSeconds)}); ` : ''}
+                  <span className="font-semibold text-slate-700">• File đính kèm / Ghi âm: </span>
+                  <span className="font-bold">
+                    {audioUrl ? `Đã ghi âm (${formatDuration(recordingSeconds)} - Đã chuyển thành chữ); ` : ''}
                     {attachedDocs.length > 0
                       ? attachedDocs.map((d) => d.name).join(', ')
                       : !audioUrl
-                      ? '---'
+                      ? 'Không có'
                       : ''}
                   </span>
                 </div>
                 <div>
-                  <span className="font-semibold">{t.a4RefLink}</span>
+                  <span className="font-semibold text-slate-700">• Link tham khảo: </span>
                   <span className="underline">
                     {referenceLink || '................................................................'}
                   </span>
@@ -2479,20 +2647,20 @@ export default function App() {
               </div>
 
               {capturedImages.length > 0 && (
-                <div className="pt-1 border-t border-slate-200">
-                  <div className="font-semibold mb-1">{t.a4AttachedPhotos}</div>
-                  <div className="grid grid-cols-4 gap-2">
+                <div className="pt-2 border-t border-slate-200">
+                  <div className="font-semibold mb-1.5">• Hình ảnh chụp / Giao diện mẫu đính kèm:</div>
+                  <div className="grid grid-cols-4 gap-2.5">
                     {capturedImages.map((img) => (
                       <div
                         key={img.id}
-                        className="border border-slate-300 rounded p-0.5 text-center"
+                        className="border border-slate-300 rounded p-1 text-center bg-slate-50"
                       >
                         <img
                           src={img.dataUrl}
                           alt={img.name}
-                          className="h-14 w-full object-contain mx-auto"
+                          className="h-20 w-full object-contain mx-auto"
                         />
-                        <div className="text-[8px] truncate text-slate-600 mt-0.5">{img.name}</div>
+                        <div className="text-[8.5px] truncate text-slate-600 mt-1">{img.name}</div>
                       </div>
                     ))}
                   </div>
@@ -2501,24 +2669,26 @@ export default function App() {
             </div>
           </div>
 
-          {/* A4 Footer Introducing Duy Anh Digital Lab */}
-          <div className="border-t-2 border-[#0C1B2E] pt-1.5 flex items-center justify-between text-[9px] text-slate-700">
+          {/* Callback Promise Banner */}
+          <div className="mb-4 p-2.5 rounded-lg bg-slate-100 border border-slate-300 text-[11px] font-bold text-[#0C1B2E] text-center">
+            {c.a4CallbackPromise}
+          </div>
+
+          {/* A4 Footer */}
+          <div className="border-t-2 border-[#0C1B2E] pt-2.5 flex items-center justify-between text-[10px] text-slate-700">
             <div>
-              <div className="font-extrabold text-[#0C1B2E] uppercase">{t.a4FooterTitle}</div>
-              <div>
-                {t.a4FooterExplore}{' '}
-                <strong className="text-[#0C1B2E]">https://duy-anh-digital-lab.vercel.app</strong>{' '}
-                &amp; <strong className="text-[#0C1B2E]">https://ungdung.vercel.app</strong>
+              <div className="font-extrabold text-[#0C1B2E] uppercase">
+                DUY ANH DIGITAL LAB — &quot;MONG MUỐN → Ý TƯỞNG → HIỆN THỰC&quot;
               </div>
-              <div>{t.a4FooterDomains}</div>
+              <div>
+                Hệ sinh thái 30+ ứng dụng Web &amp; AI thực chiến:{' '}
+                <strong className="text-[#0C1B2E]">https://ungdung.vercel.app</strong>
+              </div>
             </div>
-            <div className="text-right shrink-0 pl-3 border-l border-slate-300">
-              <div className="font-bold text-[#0C1B2E]">{t.a4FooterContact}</div>
+            <div className="text-right shrink-0 pl-4 border-l border-slate-300">
+              <div className="font-bold text-[#0C1B2E]">LIÊN HỆ TƯ VẤN &amp; TRIỂN KHAI</div>
               <div>
-                Email: <strong>anhpob@gmail.com</strong>
-              </div>
-              <div>
-                Zalo / Tel: <strong>+84 908 095693</strong>
+                Email: <strong>anhpob@gmail.com</strong> | Zalo: <strong>+84 908 095693</strong>
               </div>
             </div>
           </div>
