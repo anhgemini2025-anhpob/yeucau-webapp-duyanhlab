@@ -707,6 +707,17 @@ export default function App() {
   const photoUploadRef = useRef<HTMLInputElement | null>(null);
   const fileUploadRef = useRef<HTMLInputElement | null>(null);
   const a4SheetRef = useRef<HTMLDivElement | null>(null);
+  const mainScreenRef = useRef<HTMLDivElement | null>(null);
+
+  const goToStep = (nextStep: number) => {
+    setStep(nextStep);
+    if (nextStep !== 4) {
+      setShowA4Preview(false);
+    }
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 30);
+  };
 
   const todayStr = new Date().toLocaleDateString('vi-VN', {
     day: '2-digit',
@@ -1369,46 +1380,52 @@ export default function App() {
         </div>
       )}
 
-      {/* ==================== ULTRA-SIMPLE 3-STEP INTERVIEW WIZARD ==================== */}
-      <div className="no-print flex-1 flex flex-col max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      {/* ==================== ULTRA-SIMPLE 3-STEP INTERVIEW WIZARD (MAIN SCREEN FIT FOR IPHONE, SAMSUNG, IPAD, LAPTOP) ==================== */}
+      <div
+        ref={mainScreenRef}
+        className="no-print flex-1 flex flex-col max-w-4xl w-full mx-auto px-3 sm:px-6 py-2.5 sm:py-5"
+      >
         {/* TOP HEADER: Brand + 5 Languages */}
-        <header className="space-y-3 mb-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
-            <a
-              href="https://ungdung.vercel.app"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3"
-            >
-              <img
-                src="/logo-duyanhlab.jpg"
-                alt="Duy Anh Digital Lab"
-                className="h-11 sm:h-12 w-auto rounded-xl border border-slate-200 shadow-sm object-cover"
-              />
-              <div>
-                <div className="text-xs font-extrabold tracking-wider text-amber-700 uppercase">
-                  DUY ANH LAB • digital
+        <header className="space-y-2.5 mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white border border-slate-200 rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <a
+                href="https://ungdung.vercel.app"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2.5 sm:gap-3 min-w-0"
+              >
+                <img
+                  src="/logo-duyanhlab.jpg"
+                  alt="Duy Anh Digital Lab"
+                  className="h-10 sm:h-12 w-auto rounded-xl border border-slate-200 shadow-sm object-cover shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="text-[11px] sm:text-xs font-extrabold tracking-wider text-amber-700 uppercase truncate">
+                    DUY ANH LAB • digital
+                  </div>
+                  <h1 className="text-sm sm:text-xl font-extrabold text-slate-900 leading-tight truncate">
+                    {c.headerTitle}
+                  </h1>
+                  <p className="text-[11px] sm:text-xs text-emerald-700 font-semibold flex items-center gap-1 mt-0.5 truncate">
+                    <PhoneCall className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{c.subHeaderNote}</span>
+                  </p>
                 </div>
-                <h1 className="text-base sm:text-xl font-extrabold text-slate-900 leading-tight">
-                  {c.headerTitle}
-                </h1>
-                <p className="text-xs sm:text-sm text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
-                  <PhoneCall className="w-3.5 h-3.5" /> {c.subHeaderNote}
-                </p>
-              </div>
-            </a>
+              </a>
+            </div>
 
-            {/* 5-Language Switcher */}
-            <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-              <Languages className="w-4 h-4 text-slate-600 ml-1 hidden sm:inline" />
+            {/* 5-Language Switcher (Scrollable single row on small phones, wrap on tablet/laptop) */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto thin-scroll">
+              <Languages className="w-4 h-4 text-slate-600 ml-1 hidden md:inline shrink-0" />
               {SUPPORTED_LANGUAGES.map((l) => (
                 <button
                   key={l.code}
                   type="button"
                   onClick={() => setLang(l.code)}
-                  className={`text-xs sm:text-sm font-bold px-2.5 py-1.5 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap ${
+                  className={`text-xs sm:text-sm font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 whitespace-nowrap shrink-0 touch-manipulation ${
                     lang === l.code
-                      ? 'bg-slate-900 text-amber-300 shadow-md'
+                      ? 'bg-slate-900 text-amber-300 shadow-sm'
                       : 'text-slate-700 hover:bg-white hover:text-slate-950'
                   }`}
                 >
@@ -1427,8 +1444,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* 4-Tab Progress Bar (3 Questions + Finish) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* 4-Tab Progress Bar (Tap any tab -> displays immediately on Main Screen) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
             {stepTabs.map((label, idx) => {
               const sNum = idx + 1;
               const isCurrent = step === sNum;
@@ -1437,13 +1454,13 @@ export default function App() {
                 <button
                   key={sNum}
                   type="button"
-                  onClick={() => setStep(sNum)}
-                  className={`text-sm sm:text-base font-extrabold py-3 px-3 rounded-2xl border-2 transition truncate text-center ${
+                  onClick={() => goToStep(sNum)}
+                  className={`text-xs sm:text-base font-extrabold py-2.5 sm:py-3 px-2.5 sm:px-3 rounded-xl sm:rounded-2xl border-2 transition truncate text-center touch-manipulation ${
                     isCurrent
                       ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md'
                       : isPassed
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-800'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900'
                   }`}
                 >
                   {isPassed && sNum < 4 ? `✓ ${label}` : label}
@@ -1453,29 +1470,32 @@ export default function App() {
           </div>
         </header>
 
-        {/* MAIN INTERVIEW CARD */}
-        <main className="flex-1 flex flex-col justify-center">
-          <div className="bg-white border-2 border-slate-200/90 rounded-3xl p-5 sm:p-8 shadow-xl">
+        {/* MAIN INTERVIEW CARD (DISPLAYS DIRECTLY ON MAIN SCREEN OF IPHONE, SAMSUNG, IPAD, LAPTOP) */}
+        <main className="flex-1 flex flex-col justify-start sm:justify-center">
+          <div
+            id="main-screen-card"
+            className="bg-white border-2 border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xl"
+          >
             {/* ==================== STEP 1/3: LIÊN HỆ & MỤC ĐÍCH (CÁ NHÂN / CÔNG TY) ==================== */}
             {step === 1 && (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
                     {c.s1Title}
                   </h2>
-                  <p className="text-base sm:text-lg text-slate-600 mt-1">{c.s1Sub}</p>
+                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{c.s1Sub}</p>
                 </div>
 
                 {/* Personal vs Company Big Toggle */}
                 <div>
-                  <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2.5">
+                  <label className="block text-sm sm:text-lg font-bold text-slate-800 mb-2">
                     {c.usageTypeLabel}
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setUsageType('personal')}
-                      className={`p-4 sm:p-5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                      className={`p-3.5 sm:p-5 rounded-2xl border-2 text-left transition flex items-center justify-between touch-manipulation ${
                         usageType === 'personal'
                           ? 'bg-amber-50 border-amber-600 text-slate-950 shadow-md'
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-400'
@@ -1483,7 +1503,7 @@ export default function App() {
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                             usageType === 'personal'
                               ? 'bg-slate-900 text-amber-300'
                               : 'bg-slate-200 text-slate-600'
@@ -1491,7 +1511,7 @@ export default function App() {
                         >
                           <User className="w-6 h-6" />
                         </div>
-                        <span className="text-lg sm:text-xl font-extrabold">
+                        <span className="text-base sm:text-xl font-extrabold">
                           {c.personalUsage}
                         </span>
                       </div>
@@ -1503,7 +1523,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setUsageType('company')}
-                      className={`p-4 sm:p-5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                      className={`p-3.5 sm:p-5 rounded-2xl border-2 text-left transition flex items-center justify-between touch-manipulation ${
                         usageType === 'company'
                           ? 'bg-amber-50 border-amber-600 text-slate-950 shadow-md'
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-400'
@@ -1511,7 +1531,7 @@ export default function App() {
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                             usageType === 'company'
                               ? 'bg-slate-900 text-amber-300'
                               : 'bg-slate-200 text-slate-600'
@@ -1519,7 +1539,7 @@ export default function App() {
                         >
                           <Building2 className="w-6 h-6" />
                         </div>
-                        <span className="text-lg sm:text-xl font-extrabold">
+                        <span className="text-base sm:text-xl font-extrabold">
                           {c.companyUsage}
                         </span>
                       </div>
@@ -1530,10 +1550,10 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Simple Contact Inputs (No Expected App Name, No Clutter) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                {/* Simple Contact Inputs (16px+ font so iPhone/Samsung never auto-zooms) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 pt-1">
                   <div>
-                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
+                    <label className="block text-sm sm:text-lg font-bold text-slate-800 mb-1.5">
                       {c.contactNameLabel}
                     </label>
                     <input
@@ -1541,12 +1561,12 @@ export default function App() {
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
                       placeholder={c.contactNamePlaceholder}
-                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3.5 text-lg sm:text-xl font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
+                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-xl font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-base sm:text-lg font-extrabold text-amber-800 mb-1.5">
+                    <label className="block text-sm sm:text-lg font-extrabold text-amber-800 mb-1.5">
                       {c.phoneLabel}
                     </label>
                     <input
@@ -1554,13 +1574,13 @@ export default function App() {
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
                       placeholder={c.phonePlaceholder}
-                      className="w-full bg-amber-50/50 focus:bg-white border-2 border-amber-400 focus:border-slate-900 rounded-2xl px-4 py-3.5 text-lg sm:text-xl font-bold text-slate-900 placeholder-slate-400 outline-none transition"
+                      className="w-full bg-amber-50/50 focus:bg-white border-2 border-amber-400 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-xl font-bold text-slate-900 placeholder-slate-400 outline-none transition"
                     />
                   </div>
 
                   {usageType === 'company' && (
                     <div>
-                      <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
+                      <label className="block text-sm sm:text-lg font-bold text-slate-800 mb-1.5">
                         {c.orgNameLabel}
                       </label>
                       <input
@@ -1574,7 +1594,7 @@ export default function App() {
                   )}
 
                   <div className={usageType === 'personal' ? 'sm:col-span-2' : ''}>
-                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
+                    <label className="block text-sm sm:text-lg font-bold text-slate-800 mb-1.5">
                       {c.emailLabel}
                     </label>
                     <input
@@ -1589,34 +1609,34 @@ export default function App() {
               </div>
             )}
 
-            {/* ==================== STEP 2/3: CHỈ GHI NHẬN MONG MUỐN (GHI ÂM RA TEXT / GỢI Ý ẨN-HIỆN / CHATBOX) ==================== */}
+            {/* ==================== STEP 2/3: CHỈ GHI NHẬN MONG MUỐN (HIỂN THỊ NGAY TRÊN MÀN HÌNH CHÍNH) ==================== */}
             {step === 2 && (
-              <div className="space-y-5">
+              <div className="space-y-4 sm:space-y-5">
                 <div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
                     {c.s2Title}
                   </h2>
-                  <p className="text-base sm:text-lg text-slate-600 mt-1">{c.s2Sub}</p>
+                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{c.s2Sub}</p>
                 </div>
 
-                {/* Big Action Bar: 1. Voice Record (Auto to Text) | 2. Toggle Suggestions | 3. Open Chatbox */}
-                <div className="flex flex-wrap items-center gap-3">
+                {/* Big Action Bar: 1. Voice Record (Auto to Text) | 2. Toggle Suggestions | 3. Toggle Inline Chatbox */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {!isRecording ? (
                     <button
                       type="button"
                       onClick={startVoiceToTextRecording}
-                      className="flex-1 min-w-[240px] py-4 px-5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-base sm:text-lg shadow-lg flex items-center justify-center gap-2.5 transition"
+                      className="py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-sm sm:text-base shadow-md flex items-center justify-center gap-2 transition touch-manipulation"
                     >
-                      <Mic className="w-6 h-6 shrink-0" />
+                      <Mic className="w-5 h-5 shrink-0" />
                       <span>{c.voiceRecordBtn}</span>
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={stopVoiceToTextRecording}
-                      className="flex-1 min-w-[240px] py-4 px-5 rounded-2xl bg-slate-900 text-amber-300 border-2 border-rose-500 font-extrabold text-base sm:text-lg shadow-xl flex items-center justify-center gap-2.5 animate-pulse"
+                      className="py-3.5 px-4 rounded-2xl bg-slate-900 text-amber-300 border-2 border-rose-500 font-extrabold text-sm sm:text-base shadow-xl flex items-center justify-center gap-2 animate-pulse touch-manipulation"
                     >
-                      <Square className="w-6 h-6 fill-rose-500 text-rose-500 shrink-0" />
+                      <Square className="w-5 h-5 fill-rose-500 text-rose-500 shrink-0" />
                       <span>
                         {c.voiceRecordingActive} ({formatDuration(recordingSeconds)})
                       </span>
@@ -1626,36 +1646,56 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setShowSuggestions(!showSuggestions)}
-                    className={`py-4 px-5 rounded-2xl border-2 font-extrabold text-base sm:text-lg flex items-center gap-2 transition ${
+                    className={`py-3.5 px-4 rounded-2xl border-2 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 transition touch-manipulation ${
                       showSuggestions
-                        ? 'bg-amber-100 border-amber-500 text-slate-950'
+                        ? 'bg-amber-100 border-amber-600 text-slate-950 shadow-sm'
                         : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-950'
                     }`}
                   >
                     <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
-                    <span>{showSuggestions ? c.hideSuggestionsBtn : c.toggleSuggestionsBtn}</span>
+                    <span className="truncate">
+                      {showSuggestions ? c.hideSuggestionsBtn : c.toggleSuggestionsBtn}
+                    </span>
                     {showSuggestions ? (
-                      <ChevronUp className="w-5 h-5" />
+                      <ChevronUp className="w-4 h-4 shrink-0" />
                     ) : (
-                      <ChevronDown className="w-5 h-5" />
+                      <ChevronDown className="w-4 h-4 shrink-0" />
                     )}
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setChatOpen(true)}
-                    className="py-4 px-5 rounded-2xl bg-sky-50 hover:bg-sky-100 border-2 border-sky-300 text-sky-950 font-extrabold text-base sm:text-lg flex items-center gap-2 transition"
+                    onClick={() => setChatOpen(!chatOpen)}
+                    className={`py-3.5 px-4 rounded-2xl border-2 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 transition touch-manipulation ${
+                      chatOpen
+                        ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md'
+                        : 'bg-sky-50 hover:bg-sky-100 border-sky-300 text-sky-950'
+                    }`}
                   >
-                    <Bot className="w-6 h-6 text-sky-600 shrink-0" />
-                    <span>{c.openChatboxBtn}</span>
+                    <Bot className={`w-5 h-5 shrink-0 ${chatOpen ? 'text-amber-300' : 'text-sky-600'}`} />
+                    <span className="truncate">{c.openChatboxBtn}</span>
+                    {chatOpen ? (
+                      <ChevronUp className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 shrink-0" />
+                    )}
                   </button>
                 </div>
 
-                {/* Expandable Sample Answers (HIDDEN BY DEFAULT SO IT DOES NOT CLUTTER THE SCREEN!) */}
+                {/* INLINE MAIN-SCREEN SUGGESTIONS (When tapped, displays right on Main Screen) */}
                 {showSuggestions && (
-                  <div className="p-4 rounded-2xl bg-amber-50/70 border-2 border-amber-200 space-y-2 animate-fadeIn">
-                    <div className="text-sm sm:text-base font-bold text-amber-900 mb-1">
-                      Chạm vào câu gợi ý bất kỳ để tự động điền vào ô mong muốn bên dưới:
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border-2 border-amber-300 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm font-extrabold text-amber-950">
+                        💡 Chạm vào câu gợi ý để điền ngay vào ô mong muốn trên màn hình chính:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSuggestions(false)}
+                        className="text-xs font-bold text-slate-600 hover:text-slate-900 px-2 py-0.5"
+                      >
+                        Đóng
+                      </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {c.suggestionsList.map((item, idx) => {
@@ -1665,7 +1705,7 @@ export default function App() {
                             key={idx}
                             type="button"
                             onClick={() => handleToggleSuggestion(idx)}
-                            className={`text-left text-base font-semibold px-4 py-3 rounded-xl border-2 transition flex items-start gap-2.5 ${
+                            className={`text-left text-sm sm:text-base font-semibold px-3.5 py-2.5 rounded-xl border-2 transition flex items-start gap-2 touch-manipulation ${
                               active
                                 ? 'bg-slate-900 text-amber-300 border-slate-900 font-bold shadow'
                                 : 'bg-white text-slate-800 border-slate-200 hover:border-amber-400'
@@ -1680,9 +1720,101 @@ export default function App() {
                   </div>
                 )}
 
+                {/* INLINE MAIN-SCREEN SMART CHATBOX (Displays directly on Main Screen when clicked!) */}
+                {chatOpen && (
+                  <div className="border-2 border-slate-900 rounded-2xl overflow-hidden bg-white shadow-lg">
+                    <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                          <Bot className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-extrabold text-xs sm:text-sm text-amber-300">
+                            {c.chatTitle}
+                          </div>
+                          <div className="text-[11px] text-slate-300">{c.chatSub}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setChatOpen(false)}
+                        className="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg"
+                      >
+                        ✓ Đóng
+                      </button>
+                    </div>
+
+                    <div className="p-3 space-y-2.5 max-h-48 overflow-y-auto thin-scroll bg-slate-50">
+                      {chatMessages.map((m) => (
+                        <div
+                          key={m.id}
+                          className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-sm sm:text-base leading-snug ${
+                              m.sender === 'user'
+                                ? 'bg-slate-900 text-amber-300 font-semibold'
+                                : 'bg-white border border-slate-200 text-slate-800 shadow-sm'
+                            }`}
+                          >
+                            {m.text}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Quick Reply Chips */}
+                    <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-1.5">
+                      {c.chatQuickReplies.map((qr, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSendChatMessage(qr)}
+                          className="text-xs sm:text-sm font-bold px-3 py-1.5 rounded-full bg-white hover:bg-amber-50 text-slate-800 border border-slate-300 transition touch-manipulation"
+                        >
+                          + {qr}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Chat Input + Voice Mic */}
+                    <div className="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleChatVoiceInput}
+                        className={`p-2.5 rounded-xl border transition shrink-0 ${
+                          isChatRecording
+                            ? 'bg-rose-600 text-white border-rose-600 animate-pulse'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                        }`}
+                        title="Nói bằng giọng nói"
+                      >
+                        <Mic className="w-5 h-5" />
+                      </button>
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSendChatMessage();
+                        }}
+                        placeholder={c.chatInputPlaceholder}
+                        className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-base text-slate-900 outline-none focus:border-slate-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSendChatMessage()}
+                        className="p-2.5 rounded-xl bg-slate-900 text-amber-300 hover:bg-slate-800 shrink-0"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Live Voice-to-Text Indicator */}
                 {isRecording && (
-                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-base font-semibold flex items-center gap-2.5">
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-sm sm:text-base font-semibold flex items-center gap-2.5">
                     <span className="w-3 h-3 rounded-full bg-rose-600 animate-ping shrink-0" />
                     <div>
                       <div>{c.voiceConvertingNote}</div>
@@ -1695,7 +1827,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Main Clean Wish Textarea */}
+                {/* Main Clean Wish Textarea (Always visible on Main Screen) */}
                 <div>
                   <label className="block text-base sm:text-xl font-extrabold text-slate-900 mb-2">
                     {c.wishLabel}
@@ -1705,7 +1837,7 @@ export default function App() {
                     value={wishText}
                     onChange={(e) => setWishText(e.target.value)}
                     placeholder={c.wishPlaceholder}
-                    className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl p-4 text-lg sm:text-xl font-medium text-slate-900 placeholder-slate-400 outline-none resize-none transition leading-relaxed"
+                    className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl p-3.5 sm:p-4 text-base sm:text-xl font-medium text-slate-900 placeholder-slate-400 outline-none resize-none transition leading-relaxed"
                   />
                 </div>
 
@@ -2087,29 +2219,29 @@ export default function App() {
               </div>
             )}
 
-            {/* ==================== STEP 4: HOÀN THÀNH & BẤM IN PHIẾU YÊU CẦU ==================== */}
+            {/* ==================== STEP 4: HOÀN THÀNH & BẤM IN PHIẾU YÊU CẦU (HIỂN THỊ TRỰC TIẾP TRÊN MÀN HÌNH CHÍNH) ==================== */}
             {step === 4 && (
-              <div className="space-y-6">
-                <div className="text-center space-y-2 pb-2 border-b border-slate-200">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-700">
-                    <CheckCheck className="w-10 h-10" />
+              <div className="space-y-5">
+                <div className="text-center space-y-1.5 pb-2 border-b border-slate-200">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 text-emerald-700">
+                    <CheckCheck className="w-8 h-8" />
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900">
                     {c.doneTitle}
                   </h2>
-                  <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
+                  <p className="text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto">
                     {c.doneSub}
                   </p>
                 </div>
 
                 {/* GIANT PRINT A4 & DOWNLOAD PDF BUTTONS */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <button
                     type="button"
                     onClick={handlePrintA4}
-                    className="py-5 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold text-lg sm:text-xl shadow-xl flex items-center justify-center gap-3 transition transform hover:-translate-y-0.5"
+                    className="py-4 sm:py-5 px-5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold text-base sm:text-xl shadow-xl flex items-center justify-center gap-2.5 transition touch-manipulation"
                   >
-                    <Printer className="w-7 h-7 shrink-0" />
+                    <Printer className="w-6 h-6 shrink-0" />
                     <span>{c.printBigBtn}</span>
                   </button>
 
@@ -2117,21 +2249,25 @@ export default function App() {
                     type="button"
                     onClick={handleDownloadPdf}
                     disabled={isGeneratingPdf}
-                    className="py-5 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-lg sm:text-xl shadow-xl flex items-center justify-center gap-3 transition transform hover:-translate-y-0.5"
+                    className="py-4 sm:py-5 px-5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-base sm:text-xl shadow-xl flex items-center justify-center gap-2.5 transition touch-manipulation"
                   >
-                    <FileDown className="w-7 h-7 shrink-0" />
+                    <FileDown className="w-6 h-6 shrink-0" />
                     <span>{isGeneratingPdf ? '...' : c.downloadPdfBtn}</span>
                   </button>
                 </div>
 
-                {/* Send Email / Zalo / Preview A4 */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Send Email / Zalo / Preview A4 (When clicked, displays directly on Main Screen below!) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <button
                     type="button"
                     onClick={() => handleOpenSendChannel('email')}
-                    className="py-4 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-base sm:text-lg shadow-md flex items-center justify-center gap-2.5 transition"
+                    className={`py-3.5 px-4 rounded-2xl font-extrabold text-sm sm:text-base shadow-md flex items-center justify-center gap-2 transition touch-manipulation ${
+                      sendModal.open && sendModal.channel === 'email'
+                        ? 'bg-slate-900 text-amber-300 ring-2 ring-emerald-500'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    }`}
                   >
-                    <Mail className="w-6 h-6 shrink-0" />
+                    <Mail className="w-5 h-5 shrink-0" />
                     <div className="text-left leading-tight">
                       <div>{c.sendEmailBtn}</div>
                       <div className="text-xs font-medium opacity-90">anhpob@gmail.com</div>
@@ -2141,9 +2277,13 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => handleOpenSendChannel('zalo')}
-                    className="py-4 px-5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-base sm:text-lg shadow-md flex items-center justify-center gap-2.5 transition"
+                    className={`py-3.5 px-4 rounded-2xl font-extrabold text-sm sm:text-base shadow-md flex items-center justify-center gap-2 transition touch-manipulation ${
+                      sendModal.open && sendModal.channel === 'zalo'
+                        ? 'bg-slate-900 text-amber-300 ring-2 ring-sky-400'
+                        : 'bg-sky-500 hover:bg-sky-400 text-slate-950'
+                    }`}
                   >
-                    <MessageCircle className="w-6 h-6 shrink-0" />
+                    <MessageCircle className="w-5 h-5 shrink-0" />
                     <div className="text-left leading-tight">
                       <div>{c.sendZaloBtn}</div>
                       <div className="text-xs font-semibold opacity-90">+84 908 095693</div>
@@ -2152,67 +2292,263 @@ export default function App() {
 
                   <button
                     type="button"
-                    onClick={() => setShowA4Preview(true)}
-                    className="py-4 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 border-2 border-slate-300 font-extrabold text-base sm:text-lg flex items-center justify-center gap-2 transition"
+                    onClick={() => setShowA4Preview(!showA4Preview)}
+                    className={`py-3.5 px-4 rounded-2xl border-2 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 transition touch-manipulation ${
+                      showA4Preview
+                        ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300'
+                    }`}
                   >
-                    <Eye className="w-6 h-6 text-slate-700" />
-                    <span>{c.previewA4Btn}</span>
+                    <Eye className="w-5 h-5 shrink-0" />
+                    <span>{showA4Preview ? 'Thu gọn Bản In A4' : c.previewA4Btn}</span>
                   </button>
                 </div>
 
-                {/* Clean Summary Box */}
-                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-5 space-y-2.5 text-base">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <span className="font-extrabold text-slate-900 text-lg">
-                      📋 Tóm tắt Phiếu Yêu Cầu của bạn:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setStep(1)}
-                      className="text-sm font-bold text-amber-800 hover:underline flex items-center gap-1"
-                    >
-                      <Edit3 className="w-4 h-4" /> {c.editBtn}
-                    </button>
-                  </div>
+                {/* INLINE MAIN-SCREEN EMAIL / ZALO PANEL (Displays directly on Main Screen when clicked!) */}
+                {sendModal.open && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/70 border-2 border-emerald-400 space-y-3 shadow-md">
+                    <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                      <div className="flex items-center gap-2 font-extrabold text-base sm:text-lg text-slate-900">
+                        {sendModal.channel === 'email' ? (
+                          <Mail className="w-5 h-5 text-emerald-600 shrink-0" />
+                        ) : (
+                          <MessageCircle className="w-5 h-5 text-sky-600 shrink-0" />
+                        )}
+                        <span>
+                          {sendModal.channel === 'email'
+                            ? 'Gửi Email tới: anhpob@gmail.com'
+                            : 'Gửi Zalo tới: +84 908 095693'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSendModal({
+                            open: false,
+                            channel: null,
+                            sendingCloud: false,
+                            cloudSent: false
+                          })
+                        }
+                        className="text-xs font-bold bg-white hover:bg-slate-100 border border-slate-300 px-3 py-1 rounded-lg"
+                      >
+                        Đóng
+                      </button>
+                    </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-base">
-                    <div>
-                      <span className="text-slate-500">Mục đích: </span>
-                      <strong className="text-slate-900">{usageLabelText}</strong>
+                    <div className="text-xs sm:text-sm font-bold text-emerald-900">
+                      ✓ Đã tự động sao chép toàn bộ nội dung Phiếu Yêu Cầu vào bộ nhớ tạm!
+                      {sendModal.channel === 'email' && sendModal.sendingCloud && (
+                        <span className="block text-amber-800 mt-1">
+                          ⏳ Đang gửi trực tuyến tự động tới anhpob@gmail.com...
+                        </span>
+                      )}
+                      {sendModal.channel === 'email' && sendModal.cloudSent && (
+                        <span className="block text-emerald-700 mt-1">
+                          ✅ Đã gửi trực tuyến thành công tới anhpob@gmail.com!
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-slate-500">Liên hệ: </span>
-                      <strong className="text-slate-900">
-                        {contactName || companyName || '---'} ({contactPhone || '---'})
-                      </strong>
+
+                    {sendModal.channel === 'email' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={openMailClient}
+                          className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold flex items-center justify-center gap-2 shadow touch-manipulation"
+                        >
+                          <Mail className="w-4 h-4" />
+                          <span>Mở App Email</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={openGmailWeb}
+                          className="py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-300 font-bold flex items-center justify-center gap-2 touch-manipulation"
+                        >
+                          <ExternalLink className="w-4 h-4 text-amber-600" />
+                          <span>Mở Gmail Web</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleNativeShareWithFiles}
+                          className="py-3 px-4 rounded-xl bg-slate-900 text-amber-300 font-bold flex items-center justify-center gap-2 touch-manipulation"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          <span>Đính kèm nhanh</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={openZaloChat}
+                          className="py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold flex items-center justify-center gap-2 shadow touch-manipulation"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Mở Zalo +84 908 095693</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(buildFormattedBriefText());
+                            showToast('✓ Đã sao chép lại nội dung!');
+                          }}
+                          className="py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-300 font-bold flex items-center justify-center gap-2 touch-manipulation"
+                        >
+                          <Copy className="w-4 h-4 text-amber-600" />
+                          <span>Copy lại nội dung</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleNativeShareWithFiles}
+                          className="py-3 px-4 rounded-xl bg-slate-900 text-amber-300 font-bold flex items-center justify-center gap-2 touch-manipulation"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          <span>Chia sẻ kèm File</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* INLINE MAIN-SCREEN A4 PREVIEW (100% Responsive on iPhone, Samsung, iPad, Laptop!) */}
+                {showA4Preview ? (
+                  <div className="border-2 border-slate-900 rounded-2xl p-4 sm:p-6 bg-white shadow-xl space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-slate-900 pb-3">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src="/logo-duyanhlab.jpg"
+                          alt="Duy Anh Digital Lab"
+                          className="h-11 w-auto rounded border border-slate-300 object-cover"
+                        />
+                        <div>
+                          <div className="text-[11px] font-extrabold text-amber-700 uppercase">
+                            DUY ANH LAB • DIGITAL — BẢN XEM TRƯỚC TRÊN MÀN HÌNH CHÍNH
+                          </div>
+                          <h3 className="text-sm sm:text-lg font-extrabold text-slate-900 uppercase">
+                            {c.a4MainTitle}
+                          </h3>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowA4Preview(false)}
+                        className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800"
+                      >
+                        Đóng xem trước
+                      </button>
                     </div>
-                    <div>
-                      <span className="text-slate-500">Ngôn ngữ App: </span>
-                      <strong className="text-amber-800">{selectedAppLangs.join(', ')}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Tiến độ: </span>
-                      <strong className="text-slate-900">{selectedTimeline}</strong>
-                    </div>
-                    <div className="sm:col-span-2 pt-1 border-t border-slate-200/80">
-                      <span className="text-slate-500 block mb-0.5">Mong muốn &amp; Yêu cầu riêng:</span>
-                      <div className="font-bold text-slate-900 whitespace-pre-line">
-                        {wishText || 'Trao đổi trực tiếp khi nhân viên gọi lại'}
+
+                    <div className="space-y-3 text-sm sm:text-base">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="sm:col-span-2">
+                          <span className="text-slate-500">• Mục đích sử dụng: </span>
+                          <strong className="text-slate-950">{usageLabelText}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">• Người liên hệ: </span>
+                          <strong className="text-slate-950">{contactName || '---'}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">• SĐT / Zalo: </span>
+                          <strong className="text-slate-950">{contactPhone || '---'}</strong>
+                        </div>
+                        {companyName && (
+                          <div>
+                            <span className="text-slate-500">• Công ty / Đơn vị: </span>
+                            <strong className="text-slate-950">{companyName}</strong>
+                          </div>
+                        )}
+                        {contactEmail && (
+                          <div>
+                            <span className="text-slate-500">• Email: </span>
+                            <strong className="text-slate-950">{contactEmail}</strong>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-200">
+                        <div className="font-extrabold text-slate-900 mb-1">{c.a4Sec2}:</div>
+                        <div className="font-semibold text-slate-900 whitespace-pre-line">
+                          {wishText || 'Trao đổi trực tiếp khi nhân viên gọi lại'}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                        <div>
+                          <span className="text-slate-500">• Ngôn ngữ hiển thị trên Web App: </span>
+                          <strong className="text-amber-800">
+                            {selectedAppLangs.join(' | ') || 'Tiếng Việt'}
+                          </strong>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-slate-500">• Đối tượng sử dụng: </span>
+                            <strong className="text-slate-900">{selectedScope}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">• Thời gian mong muốn: </span>
+                            <strong className="text-slate-900">{selectedTimeline}</strong>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* Clean Summary Box on Main Screen */
+                  <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-5 space-y-2.5 text-sm sm:text-base">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <span className="font-extrabold text-slate-900 text-base sm:text-lg">
+                        📋 Tóm tắt Phiếu Yêu Cầu của bạn:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => goToStep(1)}
+                        className="text-xs sm:text-sm font-bold text-amber-800 hover:underline flex items-center gap-1"
+                      >
+                        <Edit3 className="w-4 h-4" /> {c.editBtn}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <span className="text-slate-500">Mục đích: </span>
+                        <strong className="text-slate-900">{usageLabelText}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Liên hệ: </span>
+                        <strong className="text-slate-900">
+                          {contactName || companyName || '---'} ({contactPhone || '---'})
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Ngôn ngữ App: </span>
+                        <strong className="text-amber-800">{selectedAppLangs.join(', ')}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Tiến độ: </span>
+                        <strong className="text-slate-900">{selectedTimeline}</strong>
+                      </div>
+                      <div className="sm:col-span-2 pt-1 border-t border-slate-200/80">
+                        <span className="text-slate-500 block mb-0.5">Mong muốn &amp; Yêu cầu riêng:</span>
+                        <div className="font-bold text-slate-900 whitespace-pre-line">
+                          {wishText || 'Trao đổi trực tiếp khi nhân viên gọi lại'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* BOTTOM NAVIGATION BAR */}
-            <div className="mt-7 pt-4 border-t-2 border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div className="mt-5 sm:mt-6 pt-4 border-t-2 border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
               <div>
                 {step > 1 ? (
                   <button
                     type="button"
-                    onClick={() => setStep(step - 1)}
-                    className="text-base sm:text-lg font-bold px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-2 transition"
+                    onClick={() => goToStep(step - 1)}
+                    className="text-sm sm:text-lg font-bold px-4 sm:px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-2 transition touch-manipulation"
                   >
                     <ArrowLeft className="w-5 h-5" />
                     <span>{c.prevBtn}</span>
@@ -2221,7 +2557,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="text-sm font-semibold px-4 py-2.5 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 flex items-center gap-1.5 transition"
+                    className="text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 flex items-center gap-1.5 transition touch-manipulation"
                   >
                     <RotateCcw className="w-4 h-4" />
                     <span>{c.resetBtn}</span>
@@ -2229,12 +2565,12 @@ export default function App() {
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 {step < 4 && (
                   <button
                     type="button"
-                    onClick={() => setStep(4)}
-                    className="text-sm sm:text-base font-bold px-4 py-3 rounded-2xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+                    onClick={() => goToStep(4)}
+                    className="text-xs sm:text-base font-bold px-3 sm:px-4 py-3 rounded-2xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition touch-manipulation"
                   >
                     Hoàn thành ngay →
                   </button>
@@ -2243,21 +2579,21 @@ export default function App() {
                 {step < 3 && (
                   <button
                     type="button"
-                    onClick={() => setStep(step + 1)}
-                    className="text-base sm:text-xl font-extrabold px-8 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 shadow-lg flex items-center gap-2.5 transition"
+                    onClick={() => goToStep(step + 1)}
+                    className="text-sm sm:text-xl font-extrabold px-6 sm:px-8 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 shadow-lg flex items-center gap-2 transition touch-manipulation"
                   >
                     <span>{c.nextBtn}</span>
-                    <ArrowRight className="w-6 h-6" />
+                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 )}
 
                 {step === 3 && (
                   <button
                     type="button"
-                    onClick={() => setStep(4)}
-                    className="text-base sm:text-xl font-extrabold px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl flex items-center gap-2.5 transition"
+                    onClick={() => goToStep(4)}
+                    className="text-sm sm:text-xl font-extrabold px-6 sm:px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl flex items-center gap-2 transition touch-manipulation"
                   >
-                    <CheckCircle2 className="w-6 h-6" />
+                    <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
                     <span>{c.finishBtn}</span>
                   </button>
                 )}
@@ -2265,119 +2601,6 @@ export default function App() {
             </div>
           </div>
         </main>
-      </div>
-
-      {/* ==================== FLOATING SMART CHATBOX BUTTON & MODAL ==================== */}
-      <div className="no-print fixed bottom-5 right-5 z-40">
-        {!chatOpen ? (
-          <button
-            type="button"
-            onClick={() => setChatOpen(true)}
-            className="flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold text-sm sm:text-base shadow-2xl border-2 border-amber-400/60 transition transform hover:scale-105"
-          >
-            <Bot className="w-6 h-6 text-amber-300" />
-            <span>{c.openChatboxBtn}</span>
-          </button>
-        ) : (
-          <div className="w-[340px] sm:w-[400px] bg-white border-2 border-slate-300 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            {/* Chat Header */}
-            <div className="bg-slate-900 text-white px-4 py-3.5 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold">
-                  <Bot className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-extrabold text-sm text-amber-300">{c.chatTitle}</div>
-                  <div className="text-[11px] text-slate-300">{c.chatSub}</div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setChatOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Chat Messages */}
-            <div className="p-4 space-y-3 max-h-[280px] overflow-y-auto thin-scroll bg-slate-50">
-              {chatMessages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm sm:text-base leading-snug ${
-                      m.sender === 'user'
-                        ? 'bg-slate-900 text-amber-300 font-semibold'
-                        : 'bg-white border border-slate-200 text-slate-800 shadow-sm'
-                    }`}
-                  >
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Quick Reply Chips inside Chatbox */}
-            <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex gap-1.5 overflow-x-auto thin-scroll">
-              {c.chatQuickReplies.map((qr, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleSendChatMessage(qr)}
-                  className="text-xs font-bold px-3 py-1.5 rounded-full bg-white hover:bg-amber-50 text-slate-800 border border-slate-300 shrink-0 transition"
-                >
-                  + {qr}
-                </button>
-              ))}
-            </div>
-
-            {/* Chat Input + Voice Mic */}
-            <div className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={toggleChatVoiceInput}
-                className={`p-2.5 rounded-xl border transition shrink-0 ${
-                  isChatRecording
-                    ? 'bg-rose-600 text-white border-rose-600 animate-pulse'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                }`}
-                title="Nói bằng giọng nói"
-              >
-                <Mic className="w-5 h-5" />
-              </button>
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSendChatMessage();
-                }}
-                placeholder={c.chatInputPlaceholder}
-                className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm sm:text-base text-slate-900 outline-none focus:border-slate-900"
-              />
-              <button
-                type="button"
-                onClick={() => handleSendChatMessage()}
-                className="p-2.5 rounded-xl bg-slate-900 text-amber-300 hover:bg-slate-800 shrink-0"
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="px-3 pb-3 bg-white">
-              <button
-                type="button"
-                onClick={() => setChatOpen(false)}
-                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm"
-              >
-                ✓ {c.chatApplyBtn}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ==================== EXACT FOOTER FROM UNGDUNG.VERCEL.APP ==================== */}
@@ -2505,197 +2728,11 @@ export default function App() {
         </div>
       </footer>
 
-      {/* ==================== MODAL GỬI EMAIL / ZALO ==================== */}
-      {sendModal.open && (
-        <div className="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-900">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2.5">
-                {sendModal.channel === 'email' ? (
-                  <Mail className="w-6 h-6 text-emerald-600" />
-                ) : (
-                  <MessageCircle className="w-6 h-6 text-sky-500" />
-                )}
-                <h3 className="font-extrabold text-lg sm:text-xl text-slate-900">
-                  {sendModal.channel === 'email'
-                    ? 'Gửi Email: anhpob@gmail.com'
-                    : 'Gửi Zalo: +84 908 095693'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setSendModal({ open: false, channel: null, sendingCloud: false, cloudSent: false })
-                }
-                className="text-slate-400 hover:text-slate-900 p-1"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="py-4 space-y-4 text-sm sm:text-base leading-relaxed">
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-start gap-3">
-                <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-bold">
-                    Đã sao chép toàn bộ nội dung Phiếu Yêu Cầu vào bộ nhớ tạm!
-                  </div>
-                  {sendModal.channel === 'email' && sendModal.sendingCloud && (
-                    <div className="text-xs sm:text-sm text-amber-800 mt-1">
-                      ⏳ Đang gửi tự động tới <strong>anhpob@gmail.com</strong>...
-                    </div>
-                  )}
-                  {sendModal.channel === 'email' && sendModal.cloudSent && (
-                    <div className="text-xs sm:text-sm text-emerald-700 mt-1 font-semibold">
-                      ✅ Đã gửi trực tuyến thành công tới <strong>anhpob@gmail.com</strong>!
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-                <div className="font-bold text-slate-900">
-                  1. Tải File PDF (1 Trang A4) / Ghi âm để đính kèm:
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDownloadPdf}
-                    disabled={isGeneratingPdf}
-                    className="px-4 py-2 rounded-xl bg-slate-900 text-amber-300 font-bold flex items-center gap-2"
-                  >
-                    <FileDown className="w-4 h-4" />
-                    <span>{c.downloadPdfBtn}</span>
-                  </button>
-                  {audioUrl && (
-                    <button
-                      type="button"
-                      onClick={downloadVoiceRecording}
-                      className="px-4 py-2 rounded-xl bg-rose-100 text-rose-900 border border-rose-300 font-bold flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Tải Ghi âm</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleNativeShareWithFiles}
-                    className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold flex items-center gap-2"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>Đính kèm nhanh</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-                <div className="font-bold text-slate-900">
-                  {sendModal.channel === 'email'
-                    ? '2. Mở ứng dụng Email (Đã điền sẵn anhpob@gmail.com):'
-                    : '2. Mở Zalo +84 908 095693 và nhấn Dán (Ctrl+V):'}
-                </div>
-
-                {sendModal.channel === 'email' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={openMailClient}
-                      className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold flex items-center justify-center gap-2 shadow"
-                    >
-                      <Mail className="w-5 h-5" />
-                      <span>Mở App Email</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openGmailWeb}
-                      className="py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-300 font-bold flex items-center justify-center gap-2"
-                    >
-                      <ExternalLink className="w-5 h-5 text-amber-600" />
-                      <span>Mở Gmail Web</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={openZaloChat}
-                      className="py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold flex items-center justify-center gap-2 shadow"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      <span>Mở Zalo +84 908 095693</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await navigator.clipboard.writeText(buildFormattedBriefText());
-                        showToast('✓ Đã sao chép lại nội dung!');
-                      }}
-                      className="py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-300 font-bold flex items-center justify-center gap-2"
-                    >
-                      <Copy className="w-5 h-5 text-amber-600" />
-                      <span>Copy lại nội dung</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-200 flex justify-end">
-              <button
-                type="button"
-                onClick={() =>
-                  setSendModal({ open: false, channel: null, sendingCloud: false, cloudSent: false })
-                }
-                className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-sm font-bold text-slate-800"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== A4 PREVIEW & STRICT 1-PAGE A4 PRINT SHEET ==================== */}
+      {/* ==================== STRICT 1-PAGE A4 PRINT & PDF TARGET ==================== */}
       <div
         id="a4-print-wrapper"
-        className={
-          showA4Preview
-            ? 'fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm overflow-y-auto py-6 px-3 flex flex-col items-center'
-            : 'fixed -left-[9999px] top-0 pointer-events-none opacity-0'
-        }
+        className="fixed -left-[9999px] top-0 pointer-events-none opacity-0"
       >
-        {showA4Preview && (
-          <div className="no-print max-w-[210mm] w-full mb-3 flex flex-wrap items-center justify-between gap-2 bg-white border-2 border-slate-300 px-4 py-3 rounded-2xl shadow-xl">
-            <span className="text-sm sm:text-base font-extrabold text-slate-900">
-              📄 Xem trước Bản In Chuẩn 1 Trang Giấy A4
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handlePrintA4}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-amber-300 font-bold text-sm flex items-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" /> In A4
-              </button>
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={isGeneratingPdf}
-                className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm flex items-center gap-1.5"
-              >
-                <FileDown className="w-4 h-4" /> Tải PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowA4Preview(false)}
-                className="px-4 py-2 rounded-xl bg-slate-200 text-slate-800 hover:bg-slate-300 text-sm font-bold flex items-center gap-1"
-              >
-                <X className="w-4 h-4" /> Đóng
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* THE ACTUAL 1-PAGE A4 SHEET (CLEAN, CONCISE, EXECUTIVE) */}
         <div
           id="a4-print-sheet"

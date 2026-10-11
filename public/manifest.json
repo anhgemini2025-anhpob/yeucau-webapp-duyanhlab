@@ -1,0 +1,22 @@
+{
+  "name": "Phiếu Yêu Cầu Thiết Kế Web & Ứng Dụng | Duy Anh Lab",
+  "short_name": "Yêu Cầu Web App",
+  "description": "Phiếu yêu cầu thiết kế Website & Ứng dụng thông minh - Duy Anh Digital Lab",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0F172A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-duyanhlab.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/logo-duyanhlab.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
