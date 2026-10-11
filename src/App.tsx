@@ -20,15 +20,16 @@ import {
   Volume2,
   Image as ImageIcon,
   FileText,
-  ShieldCheck,
-  Layers,
   Users,
   Briefcase,
   Globe,
-  Smartphone,
   Share2,
   Download,
-  Languages
+  Languages,
+  ArrowRight,
+  ArrowLeft,
+  Edit3,
+  CheckCheck
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -61,11 +62,188 @@ interface AttachedDoc {
   file: File;
 }
 
+const INTERVIEW_STEPS_LABELS: Record<
+  LangCode,
+  {
+    stepNames: string[];
+    q1Title: string;
+    q1Sub: string;
+    q2Title: string;
+    q2Sub: string;
+    q3Title: string;
+    q3Sub: string;
+    q4Title: string;
+    q4Sub: string;
+    q5Title: string;
+    q5Sub: string;
+    doneTitle: string;
+    doneSub: string;
+    nextBtn: string;
+    prevBtn: string;
+    finishBtn: string;
+    editBtn: string;
+    voiceAnswerBtn: string;
+    voiceListening: string;
+    printNowBigBtn: string;
+  }
+> = {
+  vi: {
+    stepNames: [
+      '1. Thông tin & Lĩnh vực',
+      '2. Ý tưởng & Mục tiêu',
+      '3. Ngôn ngữ & Tính năng',
+      '4. Người dùng & Tiến độ',
+      '5. Ghi âm & Hình ảnh',
+      '✅ Hoàn thành & In Phiếu'
+    ],
+    q1Title: 'Câu 1/5: Chào bạn! Bạn muốn thiết kế Web App cho đơn vị và lĩnh vực nào?',
+    q1Sub: 'Bạn có thể chạm chọn mẫu gợi ý bên dưới, gõ phím hoặc bấm nút Mic 🎙️ để nói trực tiếp.',
+    q2Title: 'Câu 2/5: Bài toán khó khăn hiện tại và ý tưởng chính của bạn là gì?',
+    q2Sub: 'Chạm chọn các mục phù hợp hoặc bấm "🎙️ Trả lời bằng giọng nói" để kể nhanh ý tưởng của bạn.',
+    q3Title: 'Câu 3/5: Bạn muốn Web App hỗ trợ những ngôn ngữ và tính năng kỹ thuật nào?',
+    q3Sub: 'Tích chọn ngôn ngữ hiển thị (Việt, Anh, Hoa, Nhật, Hàn) và hạ tầng mong muốn.',
+    q4Title: 'Câu 4/5: Những ai sẽ sử dụng hệ thống này và tiến độ bạn mong muốn?',
+    q4Sub: 'Chọn các nhóm người dùng cần phân quyền và thời gian dự kiến triển khai.',
+    q5Title: 'Câu 5/5: Bạn có muốn Ghi âm lời nhắn, Chụp ảnh mẫu hoặc Đính kèm file không?',
+    q5Sub: 'Không bắt buộc — Bạn có thể ghi âm giọng nói, chụp ảnh bản vẽ tay/màn hình mẫu hoặc nhấn Hoàn thành ngay!',
+    doneTitle: '🎉 Đã hoàn thành Phiếu Yêu Cầu Thiết Kế Web & Ứng Dụng!',
+    doneSub: 'Kiểm tra lại tóm tắt bên dưới và bấm "In Phiếu Yêu Cầu (1 Trang A4)", "Tải PDF" hoặc gửi qua Email / Zalo.',
+    nextBtn: 'Tiếp theo',
+    prevBtn: 'Quay lại',
+    finishBtn: 'Hoàn thành Phỏng vấn',
+    editBtn: 'Sửa lại câu trả lời',
+    voiceAnswerBtn: '🎙️ Bấm để Nói câu trả lời (Chuyển giọng nói thành chữ)',
+    voiceListening: '🔴 Đang nghe bạn nói... (Bấm để dừng)',
+    printNowBigBtn: '🖨️ IN PHIẾU YÊU CẦU RA GIẤY A4 (1 TRANG)'
+  },
+  en: {
+    stepNames: [
+      '1. Contact & Domain',
+      '2. Idea & Goals',
+      '3. Languages & Tech',
+      '4. Users & Timeline',
+      '5. Voice & Photos',
+      '✅ Finish & Print A4'
+    ],
+    q1Title: 'Step 1/5: Welcome! What organization and industry is this Web App for?',
+    q1Sub: 'Tap a quick template below, type briefly, or click the Mic 🎙️ button to speak.',
+    q2Title: 'Step 2/5: What current challenges and core ideas do you want to solve?',
+    q2Sub: 'Tap the matching tags or click "🎙️ Answer by Voice" to describe your idea effortlessly.',
+    q3Title: 'Step 3/5: Which languages and technical features should the Web App include?',
+    q3Sub: 'Select target languages (Vietnamese, English, Chinese, Japanese, Korean) and platform specs.',
+    q4Title: 'Step 4/5: Who will use this Web App and what is your expected timeline?',
+    q4Sub: 'Select user roles and your preferred delivery schedule.',
+    q5Title: 'Step 5/5: Would you like to Record a Voice Note, Snap a Photo, or Attach Files?',
+    q5Sub: 'Optional — Record voice instructions, snap a sketch/screenshot, or click Finish right away!',
+    doneTitle: '🎉 Your Web Application Design Brief is Ready!',
+    doneSub: 'Review your summary below and click "Print 1-Page A4 Brief", "Download PDF", or send via Email / Zalo.',
+    nextBtn: 'Next Step',
+    prevBtn: 'Back',
+    finishBtn: 'Finish Interview',
+    editBtn: 'Edit Answers',
+    voiceAnswerBtn: '🎙️ Tap to Speak Your Answer (Voice-to-Text)',
+    voiceListening: '🔴 Listening to you... (Tap to stop)',
+    printNowBigBtn: '🖨️ PRINT REQUEST BRIEF (1-PAGE A4)'
+  },
+  zh: {
+    stepNames: [
+      '1. 基本信息与领域',
+      '2. 核心创意与目标',
+      '3. 语言与技术功能',
+      '4. 用户权限与周期',
+      '5. 录音与拍照附件',
+      '✅ 完成并打印A4'
+    ],
+    q1Title: '第 1/5 步：您好！请问您想为哪个单位和行业定制 Web 应用？',
+    q1Sub: '您可以点击下方快速模板、打字输入，或点击麦克风 🎙️ 直接语音输入。',
+    q2Title: '第 2/5 步：目前面临的痛点问题以及您的核心想法是什么？',
+    q2Sub: '点击适合的选项，或点击“🎙️ 语音回答”直接口述您的想法。',
+    q3Title: '第 3/5 步：您希望 Web 应用支持哪些语言与技术功能？',
+    q3Sub: '勾选需要集成的语言（越、英、中、日、韩）及界面风格。',
+    q4Title: '第 4/5 步：哪些人员会使用该系统？您期望的开发周期是？',
+    q4Sub: '选择用户角色权限及期望的上线时间。',
+    q5Title: '第 5/5 步：是否需要录制语音留言、拍照上传样图或添加附件？',
+    q5Sub: '选填 — 您可以直接录音、拍摄手稿/参考界面，或立即点击完成！',
+    doneTitle: '🎉 您的 Web 应用程序设计需求表已完成！',
+    doneSub: '请确认下方摘要，点击“打印单页A4需求表”、“下载PDF”或通过邮件 / Zalo 发送。',
+    nextBtn: '下一步',
+    prevBtn: '上一步',
+    finishBtn: '完成填写',
+    editBtn: '修改内容',
+    voiceAnswerBtn: '🎙️ 点击语音回答 (自动语音转文字)',
+    voiceListening: '🔴 正在倾听您的语音... (点击停止)',
+    printNowBigBtn: '🖨️ 打印需求表 (标准单页 A4)'
+  },
+  ja: {
+    stepNames: [
+      '1. 基本情報・分野',
+      '2. 課題とアイデア',
+      '3. 言語・技術仕様',
+      '4. 利用者・納期',
+      '5. 録音・写真添付',
+      '✅ 完了＆A4印刷'
+    ],
+    q1Title: '質問 1/5：どの企業・分野向けのWebアプリをご希望ですか？',
+    q1Sub: 'テンプレートをタップするか、短い文字入力またはマイク 🎙️ で音声入力できます。',
+    q2Title: '質問 2/5：現在の課題や実現したいコアアイデアは何ですか？',
+    q2Sub: '当てはまる項目を選ぶか、「🎙️ 音声で回答」を押して自由にお話しください。',
+    q3Title: '質問 3/5：搭載したい言語や技術機能・デザインは？',
+    q3Sub: '対応言語（ベトナム語・英語・中国語・日本語・韓国語）と仕様を選択してください。',
+    q4Title: '質問 4/5：利用するユーザー層とご希望の納期は？',
+    q4Sub: 'ユーザーの役割（権限）と開発スケジュールを選択してください。',
+    q5Title: '質問 5/5：音声録音や参考写真の撮影・ファイル添付はありますか？',
+    q5Sub: '任意 — 音声メモの録音、手書き案のカメラ撮影、またはそのまま「完了」を押せます！',
+    doneTitle: '🎉 Webアプリ開発 要件ヒアリングシートが完成しました！',
+    doneSub: '内容をご確認の上、「A4（1枚）印刷」「PDF保存」またはメール / Zaloで送信してください。',
+    nextBtn: '次へ進む',
+    prevBtn: '戻る',
+    finishBtn: '回答を完了する',
+    editBtn: '回答を修正する',
+    voiceAnswerBtn: '🎙️ 音声で回答する (音声テキスト変換)',
+    voiceListening: '🔴 音声を聞き取り中... (タップで停止)',
+    printNowBigBtn: '🖨️ 要件シートを印刷する (A4用紙 1枚)'
+  },
+  ko: {
+    stepNames: [
+      '1. 기본 정보 & 분야',
+      '2. 아이디어 & 목표',
+      '3. 지원 언어 & 기술',
+      '4. 사용자 & 일정',
+      '5. 음성 녹음 & 사진',
+      '✅ 완료 & A4 인쇄'
+    ],
+    q1Title: '질문 1/5: 안녕하세요! 어떤 기업/분야의 웹앱을 제작하고 싶으신가요?',
+    q1Sub: '아래 템플릿을 터치하거나 짧게 타이핑 또는 마이크 🎙️ 버튼으로 말씀해 주세요.',
+    q2Title: '질문 2/5: 현재 해결하고 싶은 문제점과 핵심 아이디어는 무엇인가요?',
+    q2Sub: '항목을 선택하시거나 "🎙️ 음성으로 답변하기"를 눌러 편하게 말씀해 주세요.',
+    q3Title: '질문 3/5: 웹앱에 탑재할 언어와 기술 사양·디자인 스타일은?',
+    q3Sub: '지원 언어(베트남어, 영어, 중국어, 일본어, 한국어)와 주요 기능을 선택해 주세요.',
+    q4Title: '질문 4/5: 어떤 사용자들이 이용하며, 희망하시는 개발 일정은 언제인가요?',
+    q4Sub: '권한별 사용자 그룹과 희망 제작 일정을 선택해 주세요.',
+    q5Title: '질문 5/5: 음성 녹음, 참고 사진 촬영 또는 파일 첨부가 필요하신가요?',
+    q5Sub: '선택 사항 — 음성 녹음이나 스케치 사진 촬영을 추가하거나 바로 완료를 누르세요!',
+    doneTitle: '🎉 웹 & 애플리케이션 맞춤 설계 요청서가 완성되었습니다!',
+    doneSub: '아래 요약 내용을 확인하시고 "A4 1장 인쇄", "PDF 다운로드" 또는 이메일 / Zalo로 전송하세요.',
+    nextBtn: '다음 단계',
+    prevBtn: '이전',
+    finishBtn: '작성 완료하기',
+    editBtn: '내용 수정하기',
+    voiceAnswerBtn: '🎙️ 음성으로 답변 말하기 (음성 텍스트 자동 변환)',
+    voiceListening: '🔴 말씀을 듣고 있습니다... (중지하려면 터치)',
+    printNowBigBtn: '🖨️ 요청서 인쇄하기 (A4 1장 맞춤)'
+  }
+};
+
 export default function App() {
   // Active UI Language (vi, en, zh, ja, ko)
   const [lang, setLang] = useState<LangCode>('vi');
   const t = TRANSLATIONS[lang];
-  const currentLangMeta = SUPPORTED_LANGUAGES.find((l) => l.code === lang) || SUPPORTED_LANGUAGES[0];
+  const wiz = INTERVIEW_STEPS_LABELS[lang];
+  const currentLangMeta =
+    SUPPORTED_LANGUAGES.find((l) => l.code === lang) || SUPPORTED_LANGUAGES[0];
+
+  // Current Interview Step: 1..5 = Interview Questions, 6 = Completed Summary & Print Screen
+  const [step, setStep] = useState<number>(1);
 
   // 1. General Info
   const [companyName, setCompanyName] = useState('');
@@ -75,7 +253,7 @@ export default function App() {
   const [projectName, setProjectName] = useState('');
   const [timelineIdx, setTimelineIdx] = useState<number>(1);
 
-  // 2. Pain Points & Goals (stored as option indices so switching language translates them seamlessly!)
+  // 2. Pain Points & Goals
   const [painPointsIdx, setPainPointsIdx] = useState<number[]>([0, 1]);
   const [goalsIdx, setGoalsIdx] = useState<number[]>([0, 1]);
   const [customNote, setCustomNote] = useState('');
@@ -85,7 +263,6 @@ export default function App() {
   const [scaleIdx, setScaleIdx] = useState<number[]>([0, 1]);
   const [securityIdx, setSecurityIdx] = useState<number[]>([0]);
   const [styleIdx, setStyleIdx] = useState<number>(0);
-  // Selected languages for the customer's Web App (indices 0..4 => Việt, Anh, Hoa, Nhật, Hàn)
   const [selectedAppLangsIdx, setSelectedAppLangsIdx] = useState<number[]>([0, 1]);
 
   // 4. Roles & Permissions
@@ -102,12 +279,12 @@ export default function App() {
   const [capturedImages, setCapturedImages] = useState<CapturedImage[]>([]);
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([]);
 
-  // Audio Recording State
+  // Audio Recording & Dictation State
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [isDictating, setIsDictating] = useState(false);
+  const [dictatingField, setDictatingField] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -179,7 +356,6 @@ export default function App() {
 
   const handleSwitchLanguage = (newLang: LangCode) => {
     setLang(newLang);
-    // If active preset was selected, update projectName & customNote to match the new language
     if (activePreset) {
       const presetInNewLang = TRANSLATIONS[newLang].presets.find((p) => p.id === activePreset);
       if (presetInNewLang) {
@@ -234,10 +410,55 @@ export default function App() {
     setAttachedDocs([]);
     setAudioUrl(null);
     setAudioBlob(null);
-    showToast('✓ Reset');
+    setStep(1);
+    showToast('✓ Đã làm mới từ đầu');
   };
 
-  // Voice Recorder + Speech Recognition in active language (vi-VN, en-US, zh-CN, ja-JP, ko-KR)
+  // Universal Voice-to-Text Dictation for any field ('projectName' | 'customNote' | 'companyName')
+  const toggleFieldDictation = (
+    fieldKey: string,
+    setter: React.Dispatch<React.SetStateAction<string>>
+  ) => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      startRecording();
+      return;
+    }
+
+    if (dictatingField === fieldKey && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setDictatingField(null);
+      return;
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore
+      }
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = currentLangMeta.speechLang;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onstart = () => setDictatingField(fieldKey);
+    recognition.onend = () => setDictatingField(null);
+    recognition.onerror = () => setDictatingField(null);
+    recognition.onresult = (event: any) => {
+      const text = event.results[0]?.[0]?.transcript;
+      if (text) {
+        setter((prev) => (prev ? `${prev.trim()} ${text}` : text));
+        showToast(`🎙️ "${text}"`);
+      }
+    };
+    recognition.start();
+    recognitionRef.current = recognition;
+  };
+
+  // Full Voice Audio Recorder + Live Speech-to-Text
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -267,7 +488,6 @@ export default function App() {
         setRecordingSeconds((prev) => prev + 1);
       }, 1000);
 
-      // Also start SpeechRecognition in current language to auto-transcribe
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
@@ -292,12 +512,12 @@ export default function App() {
           recognition.start();
           recognitionRef.current = recognition;
         } catch {
-          // Ignore speech recognition start error
+          // Ignore
         }
       }
     } catch {
       alert(
-        'Không thể truy cập Microphone / Microphone permission denied. Please allow microphone access or use Attach File.'
+        'Vui lòng cấp quyền Microphone trên trình duyệt để ghi âm, hoặc chọn Đính kèm file.'
       );
     }
   };
@@ -319,40 +539,7 @@ export default function App() {
       }
       recognitionRef.current = null;
     }
-    showToast('🎙️ Saved Voice Recording!');
-  };
-
-  // Speech-to-text only button for the note box
-  const toggleDictation = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      startRecording();
-      return;
-    }
-
-    if (isDictating && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsDictating(false);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = currentLangMeta.speechLang;
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onstart = () => setIsDictating(true);
-    recognition.onend = () => setIsDictating(false);
-    recognition.onerror = () => setIsDictating(false);
-    recognition.onresult = (event: any) => {
-      const text = event.results[0]?.[0]?.transcript;
-      if (text) {
-        setCustomNote((prev) => (prev ? `${prev.trim()}. ${text}` : text));
-        showToast('✓ Voice transcribed!');
-      }
-    };
-    recognition.start();
-    recognitionRef.current = recognition;
+    showToast('🎙️ Đã lưu bản ghi âm giọng nói!');
   };
 
   const formatDuration = (sec: number) => {
@@ -397,7 +584,7 @@ export default function App() {
             file
           }
         ]);
-        showToast(`📷 + ${customName || file.name}`);
+        showToast(`📷 Đã thêm ảnh: ${customName || file.name}`);
       };
       img.src = ev.target?.result as string;
     };
@@ -430,7 +617,7 @@ export default function App() {
         ]);
       }
     });
-    showToast('📎 File attached!');
+    showToast('📎 Đã đính kèm tài liệu!');
     e.target.value = '';
   };
 
@@ -463,7 +650,7 @@ export default function App() {
 
     const lines = [
       `📋 ${t.a4MainTitle} — DUY ANH DIGITAL LAB`,
-      `${t.a4DateLabel}: ${todayStr} | UI Language: ${currentLangMeta.fullName}`,
+      `${t.a4DateLabel}: ${todayStr} | Ngôn ngữ: ${currentLangMeta.fullName}`,
       `--------------------------------------------------`,
       `${t.a4Sec1Title}:`,
       `• ${t.companyLabel}: ${companyName || '---'}`,
@@ -529,7 +716,6 @@ export default function App() {
       let renderW = maxW;
       let renderH = renderW / ratio;
 
-      // Strictly fit on 1 single A4 page
       if (renderH > maxH) {
         renderH = maxH;
         renderW = renderH * ratio;
@@ -543,7 +729,7 @@ export default function App() {
       const safeName = (companyName || contactName || projectName || 'Brief')
         .replace(/[^a-zA-Z0-9-_]/g, '-')
         .slice(0, 24);
-      const fileName = `WebApp-Brief-${safeName}-${lang.toUpperCase()}.pdf`;
+      const fileName = `Phieu-Yeu-Cau-WebApp-${safeName}-${lang.toUpperCase()}.pdf`;
       const blob = pdf.output('blob');
       return { blob, fileName };
     } catch (error) {
@@ -563,7 +749,7 @@ export default function App() {
       a.download = result.fileName;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('📄 PDF (1-Page A4) downloaded!');
+      showToast('📄 Đã tải File PDF (Chuẩn 1 Trang A4)!');
     } else {
       window.print();
     }
@@ -577,11 +763,10 @@ export default function App() {
     if (!audioUrl) return;
     const a = document.createElement('a');
     a.href = audioUrl;
-    a.download = `Voice-Brief-${Date.now().toString().slice(-4)}.webm`;
+    a.download = `Ghi-am-yeu-cau-${Date.now().toString().slice(-4)}.webm`;
     a.click();
   };
 
-  // Native Share (Mobile / iPad / Modern Browsers)
   const handleNativeShareWithFiles = async () => {
     const text = buildFormattedBriefText();
     const filesToShare: File[] = [];
@@ -622,10 +807,9 @@ export default function App() {
       }
     }
     await navigator.clipboard.writeText(text);
-    showToast('✓ Copied to clipboard!');
+    showToast('✓ Đã sao chép toàn bộ nội dung!');
   };
 
-  // Trigger Email / Zalo Submission Flow
   const handleOpenSendChannel = async (channel: 'email' | 'zalo') => {
     const summaryText = buildFormattedBriefText();
     try {
@@ -716,7 +900,7 @@ export default function App() {
     const text = buildFormattedBriefText();
     try {
       await navigator.clipboard.writeText(text);
-      showToast('✓ Copied! Paste (Ctrl+V) into Zalo chat.');
+      showToast('✓ Đã copy! Hãy nhấn Dán (Ctrl+V) vào Zalo.');
     } catch {
       // Ignore
     }
@@ -724,271 +908,231 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-dvh lg:h-dvh lg:max-h-dvh lg:overflow-hidden flex flex-col bg-[#07111E] text-slate-100 select-none sm:select-auto">
+    <div className="min-h-dvh flex flex-col bg-gradient-to-br from-slate-50 via-white to-amber-50/40 text-slate-900">
       {/* Toast Notification */}
       {copiedToast && (
-        <div className="no-print fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-[#DFC89A] text-[#07111E] font-semibold text-xs sm:text-sm px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-amber-200 animate-bounce">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-800" />
+        <div className="no-print fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-amber-300 font-bold text-base px-6 py-3 rounded-full shadow-2xl flex items-center gap-2.5 border border-amber-400/40 animate-bounce">
+          <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
           <span>{copiedToast}</span>
         </div>
       )}
 
-      {/* ==================== INTERACTIVE SCREEN VIEW (FITS 1 SCREEN ON DESKTOP) ==================== */}
-      <div className="no-print flex-1 flex flex-col lg:overflow-hidden">
-        {/* TOP HEADER BAR */}
-        <header className="shrink-0 bg-[#0C1B2E]/95 border-b border-[#DFC89A]/20 px-3 sm:px-5 py-1.5">
-          <div className="max-w-[1600px] mx-auto flex flex-col gap-1.5">
-            {/* Row 1: Brand + 5-Language Switcher + Action Buttons */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              {/* Brand & Title */}
-              <div className="flex items-center gap-2.5">
-                <a
-                  href="https://duy-anh-digital-lab.vercel.app"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group flex items-center gap-2.5"
-                  title="Duy Anh Digital Lab"
-                >
-                  <img
-                    src="/logo-duyanhlab.jpg"
-                    alt="Duy Anh Digital Lab"
-                    className="h-9 w-auto rounded-lg border border-[#DFC89A]/40 object-cover shadow-md group-hover:border-[#DFC89A] transition"
-                  />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs sm:text-sm font-extrabold tracking-wider text-[#DFC89A]">
-                        DUY ANH LAB • digital
-                      </span>
-                      <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#DFC89A]/15 text-[#DFC89A] border border-[#DFC89A]/30">
-                        <Sparkles className="w-2.5 h-2.5" /> {t.headerBadge}
-                      </span>
-                    </div>
-                    <h1 className="text-xs sm:text-[15px] font-bold text-white leading-tight">
-                      {t.headerTitle}
-                    </h1>
-                  </div>
-                </a>
+      {/* ==================== BRIGHT INTERACTIVE INTERVIEW WIZARD ==================== */}
+      <div className="no-print flex-1 flex flex-col justify-between max-w-5xl w-full mx-auto px-4 sm:px-6 py-3 sm:py-5">
+        {/* TOP HEADER: Brand + 5 Languages + Progress Stepper */}
+        <header className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200/90 rounded-2xl px-4 py-3 shadow-sm">
+            {/* Logo & Title */}
+            <a
+              href="https://duy-anh-digital-lab.vercel.app"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 group"
+            >
+              <img
+                src="/logo-duyanhlab.jpg"
+                alt="Duy Anh Digital Lab"
+                className="h-11 sm:h-12 w-auto rounded-xl border border-slate-200 shadow-sm object-cover"
+              />
+              <div>
+                <div className="text-xs sm:text-sm font-extrabold tracking-wider text-amber-700 uppercase">
+                  DUY ANH LAB • digital
+                </div>
+                <h1 className="text-base sm:text-xl font-extrabold text-slate-900 leading-tight">
+                  {t.headerTitle}
+                </h1>
               </div>
+            </a>
 
-              {/* 5-Language Switcher (Việt, Anh, Hoa, Nhật, Hàn) */}
-              <div className="flex items-center gap-1 bg-[#07111E] border border-[#DFC89A]/30 rounded-full px-2 py-1 shadow-inner">
-                <Languages className="w-3.5 h-3.5 text-[#DFC89A] mr-0.5 hidden sm:inline" />
-                <span className="text-[10px] text-slate-400 font-medium mr-1 hidden xl:inline">
-                  {t.uiLangLabel}
-                </span>
-                {SUPPORTED_LANGUAGES.map((l) => (
-                  <button
-                    key={l.code}
-                    type="button"
-                    onClick={() => handleSwitchLanguage(l.code)}
-                    className={`text-[11px] px-2 py-0.5 rounded-full transition flex items-center gap-1 ${
-                      lang === l.code
-                        ? 'bg-[#DFC89A] text-[#07111E] font-extrabold shadow'
-                        : 'text-slate-300 hover:text-[#DFC89A] hover:bg-slate-800/70'
-                    }`}
-                    title={l.fullName}
-                  >
-                    <span>{l.flag}</span>
-                    <span>{l.shortLabel}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Quick Action Buttons */}
-              <div className="flex items-center gap-1.5 shrink-0">
+            {/* 5-Language Switcher (Chữ to, sáng rõ) */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+              <Languages className="w-4 h-4 text-slate-600 ml-1 hidden sm:inline" />
+              {SUPPORTED_LANGUAGES.map((l) => (
                 <button
+                  key={l.code}
                   type="button"
-                  onClick={() => setShowA4Preview(true)}
-                  className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-[#DFC89A] border border-[#DFC89A]/30 flex items-center gap-1.5 transition"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{t.previewA4Btn}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePrintA4}
-                  className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-600 flex items-center gap-1.5 transition"
-                >
-                  <Printer className="w-3.5 h-3.5 text-[#DFC89A]" />
-                  <span>{t.printA4Btn}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  disabled={isGeneratingPdf}
-                  className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-[#DFC89A]/20 hover:bg-[#DFC89A]/30 text-[#DFC89A] border border-[#DFC89A]/50 flex items-center gap-1.5 transition"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  <span>{isGeneratingPdf ? t.generatingPdf : t.downloadPdfBtn}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOpenSendChannel('email')}
-                  className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#DFC89A] to-[#C9AD76] text-[#07111E] hover:brightness-110 flex items-center gap-1.5 shadow-md transition"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>{t.sendEmailBtn}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOpenSendChannel('zalo')}
-                  className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-1.5 shadow-md transition"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>{t.sendZaloBtn}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Row 2: 1-Click Templates Bar */}
-            <div className="flex items-center gap-1 overflow-x-auto max-w-full py-0.5 thin-scroll border-t border-slate-800/80 pt-1">
-              <span className="text-[11px] text-[#DFC89A] font-semibold mr-1 shrink-0">
-                {t.quickPresetLabel}
-              </span>
-              {t.presets.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => applyPreset(preset)}
-                  className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border transition shrink-0 ${
-                    activePreset === preset.id
-                      ? 'bg-[#DFC89A] text-[#07111E] border-[#DFC89A] font-bold shadow'
-                      : 'bg-[#132640]/80 text-slate-200 border-slate-700 hover:border-[#DFC89A]/60 hover:text-[#DFC89A]'
+                  onClick={() => handleSwitchLanguage(l.code)}
+                  className={`text-sm font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 ${
+                    lang === l.code
+                      ? 'bg-slate-900 text-amber-300 shadow-md scale-105'
+                      : 'text-slate-700 hover:bg-white hover:text-slate-950'
                   }`}
                 >
-                  {preset.label}
+                  <span className="text-base">{l.flag}</span>
+                  <span>{l.shortLabel}</span>
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={resetForm}
-                className="text-[11px] text-slate-400 hover:text-rose-300 px-2 py-0.5 rounded-full border border-slate-800 hover:border-rose-400/40 flex items-center gap-1 shrink-0 ml-auto"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>{t.resetBtn}</span>
-              </button>
             </div>
+          </div>
+
+          {/* Interactive Step Progress Pills (1..5 + Done) */}
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+            {wiz.stepNames.map((label, idx) => {
+              const sNum = idx + 1;
+              const isCurrent = step === sNum;
+              const isPassed = step > sNum;
+              return (
+                <button
+                  key={sNum}
+                  type="button"
+                  onClick={() => setStep(sNum)}
+                  className={`text-xs sm:text-sm font-bold py-2.5 px-2 rounded-xl border transition truncate text-center ${
+                    isCurrent
+                      ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md ring-2 ring-amber-400/50'
+                      : isPassed
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-800'
+                  }`}
+                >
+                  {isPassed && sNum < 6 ? `✓ ${label}` : label}
+                </button>
+              );
+            })}
           </div>
         </header>
 
-        {/* MAIN 3-COLUMN BENTO GRID (STRICTLY 1 SCREEN ON DESKTOP) */}
-        <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-5 py-2 grid grid-cols-1 lg:grid-cols-12 gap-2.5 lg:overflow-hidden">
-          {/* ==================== COLUMN 1: THÔNG TIN CHUNG & BÀI TOÁN (4 COLS) ==================== */}
-          <div className="lg:col-span-4 flex flex-col gap-2 lg:overflow-y-auto thin-scroll pr-0.5">
-            {/* Section 1: Thông tin chung */}
-            <section className="bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-2.5 shadow-lg">
-              <div className="flex items-center justify-between mb-1.5">
-                <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
-                  <Briefcase className="w-4 h-4" />
-                  {t.sec1Title}
-                </h2>
-                <span className="text-[10px] text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
-                  {t.sec1Badge}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {/* CENTER INTERVIEW CARD (ONLY SHOWS 1 STEP AT A TIME — LARGE FONT, BRIGHT & CLEAN) */}
+        <main className="my-3 sm:my-4 flex-1 flex flex-col justify-center">
+          <div className="bg-white border-2 border-slate-200/90 rounded-3xl p-5 sm:p-8 shadow-xl transition-all">
+            {/* ==================== STEP 1: THÔNG TIN LIÊN HỆ & MẪU DỰ ÁN ==================== */}
+            {step === 1 && (
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    {t.companyLabel}
-                  </label>
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder={t.companyPlaceholder}
-                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    {t.contactLabel}
-                  </label>
-                  <input
-                    type="text"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    placeholder={t.contactPlaceholder}
-                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-[#DFC89A] mb-0.5 font-semibold">
-                    {t.phoneLabel}
-                  </label>
-                  <input
-                    type="tel"
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    placeholder={t.phonePlaceholder}
-                    className="w-full bg-[#07111E] border border-[#DFC89A]/50 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    {t.emailLabel}
-                  </label>
-                  <input
-                    type="email"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder={t.emailPlaceholder}
-                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] text-slate-300 mb-0.5 font-medium">
-                    {t.projectLabel}
-                  </label>
-                  <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder={t.projectPlaceholder}
-                    className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none transition"
-                  />
-                </div>
-              </div>
-
-              {/* Tiến độ kỳ vọng */}
-              <div className="mt-1.5">
-                <span className="block text-[11px] text-slate-400 mb-1">{t.timelineLabel}</span>
-                <div className="grid grid-cols-2 gap-1">
-                  {t.timelineOptions.map((item, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setTimelineIdx(idx)}
-                      className={`text-[11px] px-2 py-1 rounded-md border text-left truncate transition ${
-                        timelineIdx === idx
-                          ? 'bg-[#DFC89A]/20 border-[#DFC89A] text-[#DFC89A] font-semibold'
-                          : 'bg-[#07111E]/70 border-slate-800 text-slate-300 hover:border-slate-600'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* Section 2: Hiện trạng & Bài toán cần giải quyết */}
-            <section className="flex-1 bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-2.5 shadow-lg flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
-                    <Sparkles className="w-4 h-4" />
-                    {t.sec2Title}
+                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    {wiz.q1Title}
                   </h2>
-                  <span className="text-[10px] text-slate-400">{t.sec2Badge}</span>
+                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q1Sub}</p>
                 </div>
 
-                {/* Pain Points */}
-                <div className="mb-1.5">
-                  <p className="text-[11px] text-slate-300 font-medium mb-1">
+                {/* Quick Presets (Chữ to) */}
+                <div>
+                  <div className="text-sm sm:text-base font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
+                    <Sparkles className="w-5 h-5 text-amber-600" />
+                    <span>{t.quickPresetLabel}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                    {t.presets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => applyPreset(preset)}
+                        className={`text-left text-base sm:text-lg font-bold p-3.5 rounded-2xl border-2 transition flex items-center justify-between ${
+                          activePreset === preset.id
+                            ? 'bg-amber-50 border-amber-600 text-slate-950 shadow-md'
+                            : 'bg-slate-50/80 border-slate-200 text-slate-800 hover:border-slate-400 hover:bg-white'
+                        }`}
+                      >
+                        <span>{preset.label}</span>
+                        {activePreset === preset.id && (
+                          <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Large Input Fields with Mic Button */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-base sm:text-lg font-bold text-slate-800">
+                        {t.projectLabel}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => toggleFieldDictation('projectName', setProjectName)}
+                        className={`text-xs sm:text-sm font-bold px-3 py-1 rounded-full flex items-center gap-1.5 border transition ${
+                          dictatingField === 'projectName'
+                            ? 'bg-rose-600 text-white border-rose-600 animate-pulse'
+                            : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                        }`}
+                      >
+                        <Mic className="w-4 h-4" />
+                        <span>
+                          {dictatingField === 'projectName' ? wiz.voiceListening : t.dictateBtn}
+                        </span>
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      placeholder={t.projectPlaceholder}
+                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-xl font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
+                      {t.contactLabel}
+                    </label>
+                    <input
+                      type="text"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      placeholder={t.contactPlaceholder}
+                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-base sm:text-lg font-bold text-amber-800 mb-1.5">
+                      {t.phoneLabel}
+                    </label>
+                    <input
+                      type="tel"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      placeholder={t.phonePlaceholder}
+                      className="w-full bg-amber-50/40 focus:bg-white border-2 border-amber-400 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-bold text-slate-900 placeholder-slate-400 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
+                      {t.companyLabel}
+                    </label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder={t.companyPlaceholder}
+                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-1.5">
+                      {t.emailLabel}
+                    </label>
+                    <input
+                      type="email"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      placeholder={t.emailPlaceholder}
+                      className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ==================== STEP 2: BÀI TOÁN & Ý TƯỞNG (GÕ PHÍM HOẶC GHI ÂM GIỌNG NÓI) ==================== */}
+            {step === 2 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    {wiz.q2Title}
+                  </h2>
+                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q2Sub}</p>
+                </div>
+
+                {/* Pain Points (Chữ to) */}
+                <div>
+                  <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
                     {t.painPointsLabel}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {t.painPointsOptions.map((item, idx) => {
                       const active = painPointsIdx.includes(idx);
                       return (
@@ -996,13 +1140,19 @@ export default function App() {
                           key={idx}
                           type="button"
                           onClick={() => toggleIndex(painPointsIdx, setPainPointsIdx, idx)}
-                          className={`text-[11px] px-2 py-0.5 rounded-md border transition flex items-center gap-1 ${
+                          className={`text-left text-base sm:text-lg font-semibold px-4 py-3 rounded-2xl border-2 transition flex items-center gap-3 ${
                             active
-                              ? 'bg-amber-500/20 border-[#DFC89A] text-[#DFC89A] font-semibold'
-                              : 'bg-[#07111E]/70 border-slate-800 text-slate-300 hover:border-slate-600'
+                              ? 'bg-amber-50 border-amber-600 text-slate-950 font-bold shadow-sm'
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-400'
                           }`}
                         >
-                          <span>{active ? '✓' : '+'}</span>
+                          <span
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
+                              active ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {active ? '✓' : '+'}
+                          </span>
                           <span>{item}</span>
                         </button>
                       );
@@ -1010,10 +1160,12 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Goals */}
-                <div className="mb-1.5">
-                  <p className="text-[11px] text-slate-300 font-medium mb-1">{t.goalsLabel}</p>
-                  <div className="flex flex-wrap gap-1">
+                {/* Expected Goals (Chữ to) */}
+                <div>
+                  <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
+                    {t.goalsLabel}
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {t.goalsOptions.map((item, idx) => {
                       const active = goalsIdx.includes(idx);
                       return (
@@ -1021,216 +1173,217 @@ export default function App() {
                           key={idx}
                           type="button"
                           onClick={() => toggleIndex(goalsIdx, setGoalsIdx, idx)}
-                          className={`text-[11px] px-2 py-0.5 rounded-md border transition flex items-center gap-1 ${
+                          className={`text-left text-base sm:text-lg font-semibold px-4 py-3 rounded-2xl border-2 transition flex items-center gap-3 ${
                             active
-                              ? 'bg-emerald-500/20 border-emerald-400/70 text-emerald-200 font-semibold'
-                              : 'bg-[#07111E]/70 border-slate-800 text-slate-300 hover:border-slate-600'
+                              ? 'bg-emerald-50 border-emerald-600 text-emerald-950 font-bold shadow-sm'
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-400'
                           }`}
                         >
-                          <span>{active ? '✓' : '+'}</span>
+                          <span
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
+                              active ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {active ? '✓' : '+'}
+                          </span>
                           <span>{item}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
-              </div>
 
-              {/* Short Custom Idea / Voice-to-Text Box */}
-              <div className="mt-1">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] text-[#DFC89A] font-semibold">
-                    {t.customNoteLabel}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={toggleDictation}
-                    className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 border transition ${
-                      isDictating
-                        ? 'bg-rose-500 text-white border-rose-400 animate-pulse'
-                        : 'bg-[#132640] text-[#DFC89A] border-[#DFC89A]/40 hover:bg-[#DFC89A]/20'
-                    }`}
-                  >
-                    <Mic className="w-3 h-3" />
-                    <span>{isDictating ? t.dictatingBtn : t.dictateBtn}</span>
-                  </button>
-                </div>
-                <textarea
-                  rows={2}
-                  value={customNote}
-                  onChange={(e) => setCustomNote(e.target.value)}
-                  placeholder={t.customNotePlaceholder}
-                  className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none resize-none transition"
-                />
-              </div>
-            </section>
-          </div>
-
-          {/* ==================== COLUMN 2: KỸ THUẬT, NGÔN NGỮ & PHÂN QUYỀN (4 COLS) ==================== */}
-          <div className="lg:col-span-4 flex flex-col gap-2 lg:overflow-y-auto thin-scroll pr-0.5">
-            {/* Section 3: Yêu cầu kỹ thuật, Ngôn ngữ & Giao diện */}
-            <section className="bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-2.5 shadow-lg">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
-                  <Layers className="w-4 h-4" />
-                  {t.sec3Title}
-                </h2>
-                <span className="text-[10px] text-slate-400">{t.sec3Badge}</span>
-              </div>
-
-              {/* Hạ tầng & Dữ liệu */}
-              <div className="mb-1.5">
-                <p className="text-[11px] text-slate-300 font-medium mb-1">{t.infraLabel}</p>
-                <div className="flex flex-wrap gap-1">
-                  {t.infraOptions.map((item, idx) => {
-                    const active = infraIdx.includes(idx);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => toggleIndex(infraIdx, setInfraIdx, idx)}
-                        className={`text-[11px] px-2 py-0.5 rounded-md border transition ${
-                          active
-                            ? 'bg-[#DFC89A]/20 border-[#DFC89A] text-[#DFC89A] font-semibold'
-                            : 'bg-[#07111E]/70 border-slate-800 text-slate-300 hover:border-slate-600'
-                        }`}
-                      >
-                        {active ? '✓ ' : '+ '}
-                        {item}
-                      </button>
-                    );
-                  })}
+                {/* Big Conversational Answer Box + Prominent Voice Answer Button */}
+                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <label className="text-base sm:text-xl font-extrabold text-slate-900">
+                      {t.customNoteLabel}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => toggleFieldDictation('customNote', setCustomNote)}
+                      className={`text-sm sm:text-base font-extrabold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition ${
+                        dictatingField === 'customNote'
+                          ? 'bg-rose-600 text-white animate-pulse'
+                          : 'bg-slate-900 text-amber-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <Mic className="w-5 h-5" />
+                      <span>
+                        {dictatingField === 'customNote'
+                          ? wiz.voiceListening
+                          : wiz.voiceAnswerBtn}
+                      </span>
+                    </button>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={customNote}
+                    onChange={(e) => setCustomNote(e.target.value)}
+                    placeholder={t.customNotePlaceholder}
+                    className="w-full bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl p-4 text-base sm:text-xl font-medium text-slate-900 placeholder-slate-400 outline-none resize-none transition"
+                  />
                 </div>
               </div>
+            )}
 
-              {/* Quy mô & Nền tảng */}
-              <div className="mb-1.5">
-                <p className="text-[11px] text-slate-300 font-medium mb-1">{t.scaleLabel}</p>
-                <div className="flex flex-wrap gap-1">
-                  {t.scaleOptions.map((item, idx) => {
-                    const active = scaleIdx.includes(idx);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => toggleIndex(scaleIdx, setScaleIdx, idx)}
-                        className={`text-[11px] px-2 py-0.5 rounded-md border transition ${
-                          active
-                            ? 'bg-sky-500/20 border-sky-400/70 text-sky-200 font-semibold'
-                            : 'bg-[#07111E]/70 border-slate-800 text-slate-300 hover:border-slate-600'
-                        }`}
-                      >
-                        {active ? '✓ ' : '+ '}
-                        {item}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* NGÔN NGỮ LỰA CHỌN CHO WEB APP (VIỆT, ANH, HOA, NHẬT, HÀN) */}
-              <div className="mb-1.5 p-2 rounded-lg bg-[#07111E]/90 border border-[#DFC89A]/40">
-                <p className="text-[11px] text-[#DFC89A] font-bold mb-1 flex items-center gap-1">
-                  <Languages className="w-3.5 h-3.5" />
-                  {t.appLangLabel}
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {appLangOptions.map((label, idx) => {
-                    const active = selectedAppLangsIdx.includes(idx);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() =>
-                          toggleIndex(selectedAppLangsIdx, setSelectedAppLangsIdx, idx)
-                        }
-                        className={`text-[11px] px-2 py-0.5 rounded-md border transition ${
-                          active
-                            ? 'bg-[#DFC89A] text-[#07111E] border-[#DFC89A] font-extrabold shadow-sm'
-                            : 'bg-[#0C1B2E] border-slate-700 text-slate-300 hover:border-[#DFC89A]/60'
-                        }`}
-                      >
-                        {active ? '✓ ' : '+ '}
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Bảo mật & Phong cách thiết kế */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 border-t border-slate-800/80">
+            {/* ==================== STEP 3: NGÔN NGỮ LỰA CHỌN & TÍNH NĂNG KỸ THUẬT ==================== */}
+            {step === 3 && (
+              <div className="space-y-6">
                 <div>
-                  <p className="text-[11px] text-slate-300 font-medium mb-1 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#DFC89A]" />
-                    {t.securityLabel}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {t.securityOptions.map((item, idx) => {
-                      const active = securityIdx.includes(idx);
+                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    {wiz.q3Title}
+                  </h2>
+                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q3Sub}</p>
+                </div>
+
+                {/* 5 Target App Languages (Việt, Anh, Hoa, Nhật, Hàn) - Big Buttons */}
+                <div className="bg-amber-50/70 border-2 border-amber-300 rounded-2xl p-4 sm:p-5">
+                  <label className="block text-base sm:text-xl font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+                    <Languages className="w-6 h-6 text-amber-700" />
+                    <span>{t.appLangLabel}</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                    {appLangOptions.map((label, idx) => {
+                      const active = selectedAppLangsIdx.includes(idx);
                       return (
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => toggleIndex(securityIdx, setSecurityIdx, idx)}
-                          className={`text-[10px] px-1.5 py-0.5 rounded border transition ${
+                          onClick={() =>
+                            toggleIndex(selectedAppLangsIdx, setSelectedAppLangsIdx, idx)
+                          }
+                          className={`text-base sm:text-lg font-bold py-3.5 px-3 rounded-2xl border-2 transition flex items-center justify-center gap-2 ${
                             active
-                              ? 'bg-purple-500/20 border-purple-400/70 text-purple-200 font-semibold'
-                              : 'bg-[#07111E]/70 border-slate-800 text-slate-400 hover:border-slate-600'
+                              ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md'
+                              : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500'
                           }`}
                         >
-                          {active ? '✓ ' : '+ '}
-                          {item}
+                          <span>{active ? '✓' : '+'}</span>
+                          <span>{label}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
+
+                {/* Infrastructure & Core Features */}
                 <div>
-                  <label className="block text-[11px] text-slate-300 mb-1 font-medium">
-                    {t.styleLabel}
+                  <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
+                    {t.infraLabel}
                   </label>
-                  <select
-                    value={styleIdx}
-                    onChange={(e) => setStyleIdx(Number(e.target.value))}
-                    className="w-full bg-[#07111E] border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-[#DFC89A] font-semibold outline-none"
-                  >
-                    {t.styleOptions.map((st, idx) => (
-                      <option key={idx} value={idx}>
-                        {st}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {t.infraOptions.map((item, idx) => {
+                      const active = infraIdx.includes(idx);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => toggleIndex(infraIdx, setInfraIdx, idx)}
+                          className={`text-left text-base sm:text-lg font-semibold px-4 py-3 rounded-2xl border-2 transition flex items-center gap-3 ${
+                            active
+                              ? 'bg-sky-50 border-sky-600 text-sky-950 font-bold shadow-sm'
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
+                          }`}
+                        >
+                          <span
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
+                              active ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {active ? '✓' : '+'}
+                          </span>
+                          <span>{item}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Scale & Design Style */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
+                      {t.scaleLabel}
+                    </label>
+                    <div className="space-y-2">
+                      {t.scaleOptions.map((item, idx) => {
+                        const active = scaleIdx.includes(idx);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => toggleIndex(scaleIdx, setScaleIdx, idx)}
+                            className={`w-full text-left text-base font-semibold px-4 py-2.5 rounded-xl border-2 transition flex items-center gap-2.5 ${
+                              active
+                                ? 'bg-slate-900 text-white border-slate-900 font-bold'
+                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
+                            }`}
+                          >
+                            <span>{active ? '✓' : '+'}</span>
+                            <span>{item}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
+                        {t.styleLabel}
+                      </label>
+                      <div className="space-y-2">
+                        {t.styleOptions.map((st, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setStyleIdx(idx)}
+                            className={`w-full text-left text-base font-semibold px-4 py-2.5 rounded-xl border-2 transition flex items-center justify-between ${
+                              styleIdx === idx
+                                ? 'bg-amber-50 border-amber-600 text-slate-950 font-bold'
+                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
+                            }`}
+                          >
+                            <span>{st}</span>
+                            {styleIdx === idx && (
+                              <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </section>
+            )}
 
-            {/* Section 4: Phân quyền người dùng (Roles & Permissions) */}
-            <section className="flex-1 bg-[#0C1B2E]/90 border border-slate-800/90 rounded-xl p-2.5 shadow-lg flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
-                    <Users className="w-4 h-4" />
-                    {t.sec4Title}
+            {/* ==================== STEP 4: PHÂN QUYỀN NGƯỜI DÙNG & TIẾN ĐỘ ==================== */}
+            {step === 4 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    {wiz.q4Title}
                   </h2>
-                  <span className="text-[10px] text-slate-400">{t.sec4Badge}</span>
+                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q4Sub}</p>
                 </div>
 
-                <div className="space-y-1">
+                {/* Roles Cards (Chữ to, dễ bấm) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {roleStates.map((role, idx) => {
                     const trans = t.defaultRoles[idx];
                     const displayPerm = role.customPermissions ?? trans?.permissions ?? '';
                     return (
                       <div
                         key={role.id}
-                        className={`p-1.5 rounded-lg border transition ${
+                        className={`p-4 rounded-2xl border-2 transition ${
                           role.enabled
-                            ? 'bg-[#07111E]/90 border-slate-700/90'
-                            : 'bg-[#07111E]/30 border-slate-800/50 opacity-55'
+                            ? 'bg-white border-slate-900 shadow-md'
+                            : 'bg-slate-100 border-slate-200 opacity-60'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-white">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <label className="flex items-center gap-2.5 cursor-pointer text-base sm:text-lg font-extrabold text-slate-900">
                             <input
                               type="checkbox"
                               checked={role.enabled}
@@ -1239,12 +1392,14 @@ export default function App() {
                                 next[idx].enabled = e.target.checked;
                                 setRoleStates(next);
                               }}
-                              className="accent-[#DFC89A] w-3.5 h-3.5 rounded"
+                              className="accent-slate-900 w-5 h-5 rounded"
                             />
                             <span>{trans?.name}</span>
                           </label>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] text-slate-400">{t.roleQtyLabel}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs sm:text-sm font-semibold text-slate-500">
+                              {t.roleQtyLabel}
+                            </span>
                             <input
                               type="text"
                               value={role.count}
@@ -1253,7 +1408,7 @@ export default function App() {
                                 next[idx].count = e.target.value;
                                 setRoleStates(next);
                               }}
-                              className="w-20 bg-[#0C1B2E] border border-slate-700 rounded px-1.5 py-0.5 text-[11px] text-[#DFC89A] text-center outline-none"
+                              className="w-24 bg-slate-100 border border-slate-300 rounded-xl px-2.5 py-1 text-sm sm:text-base font-bold text-slate-900 text-center outline-none"
                             />
                           </div>
                         </div>
@@ -1265,345 +1420,490 @@ export default function App() {
                             next[idx].customPermissions = e.target.value;
                             setRoleStates(next);
                           }}
-                          className="w-full bg-transparent border-b border-slate-800 focus:border-[#DFC89A] text-[11px] text-slate-300 outline-none py-0.5"
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-2 text-sm sm:text-base text-slate-700 outline-none"
                           placeholder={t.rolePermPlaceholder}
                         />
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            </section>
-          </div>
 
-          {/* ==================== COLUMN 3: GHI ÂM, CHỤP ẢNH, ĐÍNH KÈM & GỬI NGAY (4 COLS) ==================== */}
-          <div className="lg:col-span-4 flex flex-col gap-2 lg:overflow-y-auto thin-scroll pr-0.5">
-            {/* Section 5: Ghi âm, Chụp ảnh & Đính kèm (Zero-Typing) */}
-            <section className="bg-[#0C1B2E]/90 border border-[#DFC89A]/30 rounded-xl p-2.5 shadow-lg">
-              <div className="flex items-center justify-between mb-1.5">
-                <h2 className="text-xs sm:text-sm font-bold text-[#DFC89A] flex items-center gap-1.5 uppercase tracking-wide">
-                  <Mic className="w-4 h-4" />
-                  {t.sec5Title}
-                </h2>
-                <span className="text-[10px] bg-[#DFC89A]/15 text-[#DFC89A] px-2 py-0.5 rounded-full font-semibold">
-                  {t.sec5Badge}
-                </span>
-              </div>
-
-              {/* 3 Big Fast Media Buttons: Voice Record | Camera Capture | Attach File */}
-              <div className="grid grid-cols-3 gap-1.5 mb-2">
-                {/* Button 1: Voice Recording */}
-                {!isRecording ? (
-                  <button
-                    type="button"
-                    onClick={startRecording}
-                    className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-gradient-to-b from-rose-500/20 to-rose-900/20 border border-rose-400/40 hover:border-rose-400 text-rose-200 transition group"
-                  >
-                    <div className="w-7 h-7 rounded-full bg-rose-500/30 flex items-center justify-center group-hover:scale-110 transition">
-                      <Mic className="w-4 h-4 text-rose-300" />
+                {/* Timeline & Security */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
+                      {t.timelineLabel}
+                    </label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {t.timelineOptions.map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setTimelineIdx(idx)}
+                          className={`text-left text-base sm:text-lg font-bold px-4 py-3 rounded-2xl border-2 transition flex items-center justify-between ${
+                            timelineIdx === idx
+                              ? 'bg-amber-50 border-amber-600 text-slate-950 shadow-sm'
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
+                          }`}
+                        >
+                          <span>{item}</span>
+                          {timelineIdx === idx && (
+                            <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
+                          )}
+                        </button>
+                      ))}
                     </div>
-                    <span className="text-[11px] font-bold text-center leading-tight">
-                      {t.recordVoiceTitle}
-                    </span>
-                    <span className="text-[9px] text-rose-300/80">{t.recordVoiceSub}</span>
-                  </button>
-                ) : (
+                  </div>
+
+                  <div>
+                    <label className="block text-base sm:text-lg font-bold text-slate-800 mb-2">
+                      {t.securityLabel}
+                    </label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {t.securityOptions.map((item, idx) => {
+                        const active = securityIdx.includes(idx);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => toggleIndex(securityIdx, setSecurityIdx, idx)}
+                            className={`text-left text-base sm:text-lg font-semibold px-4 py-3 rounded-2xl border-2 transition flex items-center gap-3 ${
+                              active
+                                ? 'bg-emerald-50 border-emerald-600 text-emerald-950 font-bold'
+                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
+                            }`}
+                          >
+                            <span>{active ? '✓' : '+'}</span>
+                            <span>{item}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ==================== STEP 5: GHI ÂM GIỌNG NÓI, CHỤP ẢNH MẪU & ĐÍNH KÈM ==================== */}
+            {step === 5 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 leading-snug">
+                    {wiz.q5Title}
+                  </h2>
+                  <p className="text-sm sm:text-lg text-slate-600 mt-1">{wiz.q5Sub}</p>
+                </div>
+
+                {/* 3 Giant Action Cards: Record Voice | Camera Capture | Attach File */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Card 1: Voice Recording */}
+                  {!isRecording ? (
+                    <button
+                      type="button"
+                      onClick={startRecording}
+                      className="flex flex-col items-center justify-center gap-2.5 p-6 rounded-3xl bg-rose-50 hover:bg-rose-100/80 border-2 border-rose-300 text-rose-950 transition shadow-sm group"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+                        <Mic className="w-8 h-8" />
+                      </div>
+                      <span className="text-lg sm:text-xl font-extrabold text-center">
+                        {t.recordVoiceTitle}
+                      </span>
+                      <span className="text-sm font-medium text-rose-700">
+                        {t.recordVoiceSub}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={stopRecording}
+                      className="flex flex-col items-center justify-center gap-2.5 p-6 rounded-3xl bg-rose-600 text-white border-2 border-rose-700 animate-pulse shadow-xl"
+                    >
+                      <Square className="w-12 h-12 fill-white" />
+                      <span className="text-xl font-extrabold">
+                        {t.stopRecordingBtn} ({formatDuration(recordingSeconds)})
+                      </span>
+                      <span className="text-sm">{t.recordingSub}</span>
+                    </button>
+                  )}
+
+                  {/* Card 2: Camera Capture */}
                   <button
                     type="button"
-                    onClick={stopRecording}
-                    className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-rose-600 text-white border border-rose-300 animate-pulse"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center gap-2.5 p-6 rounded-3xl bg-sky-50 hover:bg-sky-100/80 border-2 border-sky-300 text-sky-950 transition shadow-sm group"
                   >
-                    <Square className="w-5 h-5 fill-white" />
-                    <span className="text-[11px] font-bold">
-                      {t.stopRecordingBtn} ({formatDuration(recordingSeconds)})
+                    <div className="w-16 h-16 rounded-full bg-sky-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+                      <Camera className="w-8 h-8" />
+                    </div>
+                    <span className="text-lg sm:text-xl font-extrabold text-center">
+                      {t.cameraTitle}
                     </span>
-                    <span className="text-[9px]">{t.recordingSub}</span>
+                    <span className="text-sm font-medium text-sky-700">{t.cameraSub}</span>
                   </button>
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageInputChange}
+                    className="hidden"
+                  />
+
+                  {/* Card 3: Attach Files */}
+                  <button
+                    type="button"
+                    onClick={() => fileUploadRef.current?.click()}
+                    className="flex flex-col items-center justify-center gap-2.5 p-6 rounded-3xl bg-amber-50 hover:bg-amber-100/80 border-2 border-amber-300 text-amber-950 transition shadow-sm group"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+                      <Paperclip className="w-8 h-8" />
+                    </div>
+                    <span className="text-lg sm:text-xl font-extrabold text-center">
+                      {t.attachTitle}
+                    </span>
+                    <span className="text-sm font-medium text-amber-800">{t.attachSub}</span>
+                  </button>
+                  <input
+                    ref={fileUploadRef}
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,audio/*"
+                    onChange={handleDocInputChange}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Audio Player if recorded */}
+                {audioUrl && (
+                  <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-[220px]">
+                      <Volume2 className="w-6 h-6 text-rose-600 shrink-0" />
+                      <audio src={audioUrl} controls className="h-10 w-full max-w-md" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={downloadVoiceRecording}
+                        className="text-sm font-bold px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 flex items-center gap-1.5"
+                      >
+                        <Download className="w-4 h-4" /> {t.downloadAudioBtn}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAudioUrl(null);
+                          setAudioBlob(null);
+                        }}
+                        className="p-2 text-rose-600 hover:bg-rose-100 rounded-xl"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
                 )}
 
-                {/* Button 2: Direct Camera Photo Capture */}
-                <button
-                  type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-gradient-to-b from-sky-500/20 to-sky-900/20 border border-sky-400/40 hover:border-sky-400 text-sky-200 transition group"
-                >
-                  <div className="w-7 h-7 rounded-full bg-sky-500/30 flex items-center justify-center group-hover:scale-110 transition">
-                    <Camera className="w-4 h-4 text-sky-300" />
+                {/* Captured Images Preview */}
+                {capturedImages.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-sky-50/60 border-2 border-sky-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-base font-bold text-sky-900 flex items-center gap-2">
+                        <ImageIcon className="w-5 h-5" /> {t.capturedImagesLabel}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => photoUploadRef.current?.click()}
+                        className="text-sm font-bold text-sky-700 underline"
+                      >
+                        {t.addMorePhotoBtn}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {capturedImages.map((img) => (
+                        <div
+                          key={img.id}
+                          className="relative h-24 rounded-xl overflow-hidden border-2 border-white shadow bg-white"
+                        >
+                          <img
+                            src={img.dataUrl}
+                            alt={img.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCapturedImages((prev) => prev.filter((i) => i.id !== img.id))
+                            }
+                            className="absolute top-1 right-1 bg-slate-900/80 text-white rounded-full p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <span className="text-[11px] font-bold text-center leading-tight">
-                    {t.cameraTitle}
-                  </span>
-                  <span className="text-[9px] text-sky-300/80">{t.cameraSub}</span>
-                </button>
+                )}
                 <input
-                  ref={cameraInputRef}
+                  ref={photoUploadRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
+                  multiple
                   onChange={handleImageInputChange}
                   className="hidden"
                 />
 
-                {/* Button 3: Upload Files / Screenshots */}
-                <button
-                  type="button"
-                  onClick={() => fileUploadRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-gradient-to-b from-amber-500/20 to-amber-900/20 border border-[#DFC89A]/40 hover:border-[#DFC89A] text-[#DFC89A] transition group"
-                >
-                  <div className="w-7 h-7 rounded-full bg-[#DFC89A]/20 flex items-center justify-center group-hover:scale-110 transition">
-                    <Paperclip className="w-4 h-4 text-[#DFC89A]" />
-                  </div>
-                  <span className="text-[11px] font-bold text-center leading-tight">
-                    {t.attachTitle}
-                  </span>
-                  <span className="text-[9px] text-[#DFC89A]/80">{t.attachSub}</span>
-                </button>
-                <input
-                  ref={fileUploadRef}
-                  type="file"
-                  multiple
-                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,audio/*"
-                  onChange={handleDocInputChange}
-                  className="hidden"
-                />
-              </div>
-
-              {/* Audio Player if recorded */}
-              {audioUrl && (
-                <div className="mb-2 p-1.5 rounded-lg bg-[#07111E] border border-rose-400/40 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Volume2 className="w-4 h-4 text-rose-400 shrink-0" />
-                    <audio src={audioUrl} controls className="h-7 w-full max-w-[190px]" />
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={downloadVoiceRecording}
-                      className="text-[10px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[#DFC89A] flex items-center gap-1"
-                    >
-                      <Download className="w-3 h-3" /> {t.downloadAudioBtn}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAudioUrl(null);
-                        setAudioBlob(null);
-                      }}
-                      className="p-1 text-slate-400 hover:text-rose-400"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Captured Images / Screenshots Gallery */}
-              {capturedImages.length > 0 && (
-                <div className="mb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] text-sky-300 font-semibold flex items-center gap-1">
-                      <ImageIcon className="w-3 h-3" /> {t.capturedImagesLabel}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => photoUploadRef.current?.click()}
-                      className="text-[10px] text-[#DFC89A] underline"
-                    >
-                      {t.addMorePhotoBtn}
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {capturedImages.map((img) => (
+                {/* Attached Docs List */}
+                {attachedDocs.length > 0 && (
+                  <div className="space-y-2">
+                    {attachedDocs.map((doc) => (
                       <div
-                        key={img.id}
-                        className="relative group h-11 rounded-lg overflow-hidden border border-slate-700 bg-slate-900"
+                        key={doc.id}
+                        className="flex items-center justify-between text-base font-semibold bg-slate-100 border border-slate-300 px-4 py-2.5 rounded-xl"
                       >
-                        <img
-                          src={img.dataUrl}
-                          alt={img.name}
-                          className="w-full h-full object-cover"
-                        />
+                        <span className="truncate flex items-center gap-2 text-slate-800">
+                          <FileText className="w-5 h-5 text-amber-700 shrink-0" />
+                          {doc.name} <span className="text-slate-500">({doc.size})</span>
+                        </span>
                         <button
                           type="button"
                           onClick={() =>
-                            setCapturedImages((prev) => prev.filter((i) => i.id !== img.id))
+                            setAttachedDocs((prev) => prev.filter((d) => d.id !== doc.id))
                           }
-                          className="absolute top-0.5 right-0.5 bg-slate-950/80 text-rose-400 rounded-full p-0.5"
+                          className="text-slate-500 hover:text-rose-600 ml-2"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-5 h-5" />
                         </button>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-              <input
-                ref={photoUploadRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageInputChange}
-                className="hidden"
-              />
+                )}
 
-              {/* Attached Documents List */}
-              {attachedDocs.length > 0 && (
-                <div className="mb-1.5 space-y-1">
-                  {attachedDocs.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between text-[11px] bg-[#07111E] border border-slate-800 px-2 py-0.5 rounded"
-                    >
-                      <span className="truncate flex items-center gap-1.5 text-slate-200">
-                        <FileText className="w-3 h-3 text-[#DFC89A] shrink-0" />
-                        {doc.name} <span className="text-slate-500">({doc.size})</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setAttachedDocs((prev) => prev.filter((d) => d.id !== doc.id))
-                        }
-                        className="text-slate-400 hover:text-rose-400 ml-2"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                {/* Reference Link & Existing Doc Checkboxes */}
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {t.docTypesOptions.map((item, idx) => {
+                      const active = docTypesIdx.includes(idx);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => toggleIndex(docTypesIdx, setDocTypesIdx, idx)}
+                          className={`text-sm sm:text-base font-semibold px-3.5 py-2 rounded-xl border transition ${
+                            active
+                              ? 'bg-slate-900 text-amber-300 border-slate-900 font-bold'
+                              : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-white'
+                          }`}
+                        >
+                          {active ? '✓ ' : '+ '}
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
 
-              {/* Document Mapping Checkboxes */}
-              <div className="mb-1.5">
-                <p className="text-[11px] text-slate-300 font-medium mb-1">{t.docTypesLabel}</p>
-                <div className="flex flex-wrap gap-1">
-                  {t.docTypesOptions.map((item, idx) => {
-                    const active = docTypesIdx.includes(idx);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => toggleIndex(docTypesIdx, setDocTypesIdx, idx)}
-                        className={`text-[10px] px-2 py-0.5 rounded border transition ${
-                          active
-                            ? 'bg-[#DFC89A]/20 border-[#DFC89A] text-[#DFC89A] font-semibold'
-                            : 'bg-[#07111E]/70 border-slate-800 text-slate-400 hover:border-slate-600'
-                        }`}
-                      >
-                        {active ? '✓ ' : '+ '}
-                        {item}
-                      </button>
-                    );
-                  })}
+                  <input
+                    type="url"
+                    value={referenceLink}
+                    onChange={(e) => setReferenceLink(e.target.value)}
+                    placeholder={t.refLinkPlaceholder}
+                    className="w-full bg-slate-50 focus:bg-white border-2 border-slate-300 focus:border-slate-900 rounded-2xl px-4 py-3 text-base sm:text-lg font-medium text-slate-900 placeholder-slate-400 outline-none"
+                  />
                 </div>
               </div>
+            )}
 
-              {/* Link tham khảo / Google Drive */}
-              <div>
-                <input
-                  type="url"
-                  value={referenceLink}
-                  onChange={(e) => setReferenceLink(e.target.value)}
-                  placeholder={t.refLinkPlaceholder}
-                  className="w-full bg-[#07111E] border border-slate-700/80 focus:border-[#DFC89A] rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none"
-                />
-              </div>
-            </section>
-
-            {/* Section 6: Hộp Gửi Yêu Cầu & Xuất File 1 Trang A4 */}
-            <section className="flex-1 bg-gradient-to-br from-[#132640] via-[#0C1B2E] to-[#07111E] border border-[#DFC89A]/40 rounded-xl p-2.5 shadow-xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-[#DFC89A]">
-                    {t.sec6Title}
-                  </span>
-                  <span className="text-[10px] text-emerald-300 font-medium">{t.sec6Badge}</span>
-                </div>
-                <p className="text-[11px] text-slate-300 leading-snug mb-2">{t.sec6Desc}</p>
-
-                <div className="grid grid-cols-2 gap-2 mb-1.5">
-                  {/* Send Email */}
-                  <button
-                    type="button"
-                    onClick={() => handleOpenSendChannel('email')}
-                    className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-[#DFC89A] to-[#C9AD76] text-[#07111E] font-extrabold text-xs shadow-lg hover:brightness-110 transition"
-                  >
-                    <Mail className="w-4 h-4 shrink-0" />
-                    <div className="text-left leading-tight">
-                      <div>{t.sendEmailBtn}</div>
-                      <div className="text-[9px] font-semibold opacity-80">anhpob@gmail.com</div>
-                    </div>
-                  </button>
-
-                  {/* Send Zalo */}
-                  <button
-                    type="button"
-                    onClick={() => handleOpenSendChannel('zalo')}
-                    className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs shadow-lg transition"
-                  >
-                    <MessageCircle className="w-4 h-4 shrink-0" />
-                    <div className="text-left leading-tight">
-                      <div>{t.sendZaloBtn}</div>
-                      <div className="text-[9px] font-semibold opacity-85">+84 908 095693</div>
-                    </div>
-                  </button>
+            {/* ==================== STEP 6: MÀN HÌNH HOÀN THÀNH & BẤM IN PHIẾU YÊU CẦU ==================== */}
+            {step === 6 && (
+              <div className="space-y-6">
+                <div className="text-center space-y-2 pb-2 border-b border-slate-200">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 mb-1">
+                    <CheckCheck className="w-10 h-10" />
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+                    {wiz.doneTitle}
+                  </h2>
+                  <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
+                    {wiz.doneSub}
+                  </p>
                 </div>
 
-                {/* Print A4 & Download PDF & Mobile Native Share */}
-                <div className="grid grid-cols-3 gap-1.5">
+                {/* GIANT PRIMARY CTA: IN PHIẾU YÊU CẦU (1 TRANG A4) & TẢI PDF */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={handlePrintA4}
-                    className="py-1.5 px-2 rounded-lg bg-[#07111E]/90 hover:bg-slate-800 text-white border border-slate-700 text-[11px] font-semibold flex items-center justify-center gap-1 transition"
+                    className="py-5 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold text-lg sm:text-xl shadow-xl flex items-center justify-center gap-3 transition transform hover:-translate-y-0.5"
                   >
-                    <Printer className="w-3.5 h-3.5 text-[#DFC89A]" />
-                    <span>{t.printA4Btn}</span>
+                    <Printer className="w-7 h-7 shrink-0" />
+                    <span>{wiz.printNowBigBtn}</span>
                   </button>
+
                   <button
                     type="button"
                     onClick={handleDownloadPdf}
                     disabled={isGeneratingPdf}
-                    className="py-1.5 px-2 rounded-lg bg-[#07111E]/90 hover:bg-slate-800 text-[#DFC89A] border border-[#DFC89A]/40 text-[11px] font-semibold flex items-center justify-center gap-1 transition"
+                    className="py-5 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-lg sm:text-xl shadow-xl flex items-center justify-center gap-3 transition transform hover:-translate-y-0.5"
                   >
-                    <FileDown className="w-3.5 h-3.5" />
-                    <span>{isGeneratingPdf ? t.generatingPdf : t.downloadPdfBtn}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNativeShareWithFiles}
-                    className="py-1.5 px-2 rounded-lg bg-[#07111E]/90 hover:bg-slate-800 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold flex items-center justify-center gap-1 transition"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>{t.quickShareBtn}</span>
+                    <FileDown className="w-7 h-7 shrink-0" />
+                    <span>
+                      {isGeneratingPdf ? t.generatingPdf : `${t.downloadPdfBtn} (1 Trang A4)`}
+                    </span>
                   </button>
                 </div>
+
+                {/* Secondary Actions: Send Email, Send Zalo, Preview A4 */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenSendChannel('email')}
+                    className="py-4 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-base sm:text-lg shadow-md flex items-center justify-center gap-2.5 transition"
+                  >
+                    <Mail className="w-6 h-6 shrink-0" />
+                    <div className="text-left leading-tight">
+                      <div>{t.sendEmailBtn}</div>
+                      <div className="text-xs font-medium opacity-90">anhpob@gmail.com</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenSendChannel('zalo')}
+                    className="py-4 px-5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-base sm:text-lg shadow-md flex items-center justify-center gap-2.5 transition"
+                  >
+                    <MessageCircle className="w-6 h-6 shrink-0" />
+                    <div className="text-left leading-tight">
+                      <div>{t.sendZaloBtn}</div>
+                      <div className="text-xs font-semibold opacity-90">+84 908 095693</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowA4Preview(true)}
+                    className="py-4 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 border-2 border-slate-300 font-extrabold text-base sm:text-lg flex items-center justify-center gap-2 transition"
+                  >
+                    <Eye className="w-6 h-6 text-slate-700" />
+                    <span>{t.previewA4Btn}</span>
+                  </button>
+                </div>
+
+                {/* Compact Readable Summary Card with Quick Edit Buttons */}
+                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 text-base">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <span className="font-extrabold text-slate-900 text-lg">
+                      📋 Tóm tắt thông tin bạn đã chọn:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className="text-sm font-bold text-amber-800 hover:underline flex items-center gap-1"
+                    >
+                      <Edit3 className="w-4 h-4" /> {wiz.editBtn}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm sm:text-base">
+                    <div>
+                      <span className="text-slate-500 font-medium">{t.projectLabel}: </span>
+                      <strong className="text-slate-900">{projectName || '---'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 font-medium">{t.contactLabel} / SĐT: </span>
+                      <strong className="text-slate-900">
+                        {contactName || companyName || '---'} ({contactPhone || '---'})
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 font-medium">🌐 Ngôn ngữ Web App: </span>
+                      <strong className="text-amber-800">{selectedAppLangs.join(', ')}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 font-medium">Tiến độ & Giao diện: </span>
+                      <strong className="text-slate-900">
+                        {selectedTimeline} • {selectedStyle}
+                      </strong>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="text-slate-500 font-medium">Mục tiêu & Ý tưởng: </span>
+                      <strong className="text-slate-900">
+                        {[...selectedGoals, customNote].filter(Boolean).join(' — ') || '---'}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BOTTOM NAVIGATION BAR INSIDE INTERVIEW CARD */}
+            <div className="mt-7 pt-4 border-t-2 border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep(step - 1)}
+                    className="text-base sm:text-lg font-bold px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center gap-2 transition"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                    <span>{wiz.prevBtn}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="text-sm font-semibold px-4 py-2.5 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 flex items-center gap-1.5 transition"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>{t.resetBtn}</span>
+                  </button>
+                )}
               </div>
 
-              {/* Device Compatibility Badge */}
-              <div className="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
-                <span className="flex items-center gap-1">
-                  <Smartphone className="w-3 h-3 text-[#DFC89A]" /> {t.deviceBadge}
-                </span>
-                <a
-                  href="/Web_App_Brief_Form.docx"
-                  download
-                  className="text-[#DFC89A] hover:underline flex items-center gap-0.5"
-                >
-                  <Download className="w-3 h-3" /> {t.wordTemplateBtn}
-                </a>
+              <div className="flex items-center gap-3">
+                {step < 6 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(6)}
+                    className="text-sm sm:text-base font-bold px-4 py-3 rounded-2xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+                  >
+                    Đi tới Hoàn thành &amp; In A4 →
+                  </button>
+                )}
+
+                {step < 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(step + 1)}
+                    className="text-base sm:text-xl font-extrabold px-7 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 shadow-lg flex items-center gap-2.5 transition transform hover:translate-x-0.5"
+                  >
+                    <span>{wiz.nextBtn}</span>
+                    <ArrowRight className="w-6 h-6" />
+                  </button>
+                )}
+
+                {step === 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(6)}
+                    className="text-base sm:text-xl font-extrabold px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl flex items-center gap-2.5 transition transform hover:scale-105"
+                  >
+                    <CheckCircle2 className="w-6 h-6" />
+                    <span>{wiz.finishBtn}</span>
+                  </button>
+                )}
               </div>
-            </section>
+            </div>
           </div>
         </main>
 
-        {/* BOTTOM FOOTER: DUY ANH DIGITAL LAB (.vercel.app) INTRODUCTION */}
-        <footer className="shrink-0 bg-[#050C16] border-t border-[#DFC89A]/25 px-3 sm:px-5 py-1.5">
-          <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-xs">
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-              <span className="font-extrabold text-[#DFC89A] tracking-wide flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5" />
+        {/* COMPACT, CLEAN FOOTER INTRODUCING DUY ANH DIGITAL LAB */}
+        <footer className="bg-white border border-slate-200/90 rounded-2xl px-4 py-3 shadow-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-xs sm:text-sm">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-slate-700">
+              <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-amber-600" />
                 DUY ANH DIGITAL LAB:
               </span>
-              <span className="text-slate-300 text-[11px]">{t.footerDesc}</span>
+              <span>{t.footerDesc}</span>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 shrink-0">
@@ -1611,23 +1911,23 @@ export default function App() {
                 href="https://duy-anh-digital-lab.vercel.app"
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-0.5 rounded-full bg-[#DFC89A]/15 hover:bg-[#DFC89A]/30 text-[#DFC89A] border border-[#DFC89A]/40 font-bold text-[11px] flex items-center gap-1 transition"
+                className="px-3 py-1 rounded-full bg-slate-900 text-amber-300 font-bold text-xs sm:text-sm flex items-center gap-1 hover:bg-slate-800 transition"
               >
                 <span>🌐 duy-anh-digital-lab.vercel.app</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="w-3.5 h-3.5" />
               </a>
               <a
                 href="https://ungdung.vercel.app"
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-[11px] flex items-center gap-1 transition"
+                className="px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs sm:text-sm flex items-center gap-1 hover:bg-slate-200 transition"
               >
                 <span>🚀 ungdung.vercel.app</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="w-3.5 h-3.5" />
               </a>
               <a
                 href="mailto:anhpob@gmail.com"
-                className="text-[11px] text-slate-300 hover:text-[#DFC89A] font-medium px-1"
+                className="font-bold text-slate-700 hover:text-amber-700 px-1"
               >
                 📧 anhpob@gmail.com
               </a>
@@ -1635,7 +1935,7 @@ export default function App() {
                 href="https://zalo.me/84908095693"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-sky-300 hover:text-sky-200 font-semibold px-1"
+                className="font-bold text-sky-700 hover:text-sky-600 px-1"
               >
                 💬 Zalo: +84 908 095693
               </a>
@@ -1646,19 +1946,19 @@ export default function App() {
 
       {/* ==================== MODAL GỬI EMAIL / ZALO KÈM FILE ĐÍNH KÈM ==================== */}
       {sendModal.open && (
-        <div className="no-print fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0C1B2E] border border-[#DFC89A]/50 rounded-2xl max-w-lg w-full p-5 shadow-2xl text-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
+        <div className="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl text-slate-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
                 {sendModal.channel === 'email' ? (
-                  <Mail className="w-5 h-5 text-[#DFC89A]" />
+                  <Mail className="w-6 h-6 text-emerald-600" />
                 ) : (
-                  <MessageCircle className="w-5 h-5 text-sky-400" />
+                  <MessageCircle className="w-6 h-6 text-sky-500" />
                 )}
-                <h3 className="font-bold text-base text-white">
+                <h3 className="font-extrabold text-lg sm:text-xl text-slate-900">
                   {sendModal.channel === 'email'
-                    ? 'Email: anhpob@gmail.com'
-                    : 'Zalo: +84 908 095693'}
+                    ? 'Gửi Email: anhpob@gmail.com'
+                    : 'Gửi Zalo: +84 908 095693'}
                 </h3>
               </div>
               <button
@@ -1666,35 +1966,35 @@ export default function App() {
                 onClick={() =>
                   setSendModal({ open: false, channel: null, sendingCloud: false, cloudSent: false })
                 }
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-900 p-1"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="py-4 space-y-3 text-xs leading-relaxed">
-              <div className="p-3 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-200 flex items-start gap-2.5">
-                <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="py-4 space-y-4 text-sm sm:text-base leading-relaxed">
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-start gap-3">
+                <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
                   <div className="font-bold">
-                    Đã sao chép toàn bộ nội dung Phiếu Yêu Cầu vào bộ nhớ tạm (Clipboard)!
+                    Đã sao chép toàn bộ nội dung Phiếu Yêu Cầu vào bộ nhớ tạm!
                   </div>
                   {sendModal.channel === 'email' && sendModal.sendingCloud && (
-                    <div className="text-[11px] text-amber-300 mt-1">
-                      ⏳ Đang gửi bản sao trực tuyến tới <strong>anhpob@gmail.com</strong>...
+                    <div className="text-xs sm:text-sm text-amber-800 mt-1">
+                      ⏳ Đang đồng thời gửi bản sao tự động tới <strong>anhpob@gmail.com</strong>...
                     </div>
                   )}
                   {sendModal.channel === 'email' && sendModal.cloudSent && (
-                    <div className="text-[11px] text-emerald-300 mt-1">
+                    <div className="text-xs sm:text-sm text-emerald-700 mt-1 font-semibold">
                       ✅ Đã gửi trực tuyến thành công tới <strong>anhpob@gmail.com</strong>!
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Step 1: Download PDF / Audio / Images if user wants to attach */}
-              <div className="p-3 rounded-xl bg-[#07111E] border border-slate-800 space-y-2">
-                <div className="font-bold text-[#DFC89A]">
+              {/* Step 1: Download PDF / Audio */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <div className="font-bold text-slate-900">
                   1. Tải File PDF (1 Trang A4) / Ghi âm để đính kèm:
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1702,92 +2002,92 @@ export default function App() {
                     type="button"
                     onClick={handleDownloadPdf}
                     disabled={isGeneratingPdf}
-                    className="px-3 py-1.5 rounded-lg bg-[#DFC89A]/20 hover:bg-[#DFC89A]/30 text-[#DFC89A] border border-[#DFC89A]/50 font-semibold flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-slate-900 text-amber-300 font-bold flex items-center gap-2"
                   >
-                    <FileDown className="w-3.5 h-3.5" />
-                    <span>{isGeneratingPdf ? t.generatingPdf : 'PDF (1-Page A4)'}</span>
+                    <FileDown className="w-4 h-4" />
+                    <span>{isGeneratingPdf ? t.generatingPdf : 'Tải PDF (1 Trang A4)'}</span>
                   </button>
                   {audioUrl && (
                     <button
                       type="button"
                       onClick={downloadVoiceRecording}
-                      className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/40 font-semibold flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl bg-rose-100 text-rose-900 border border-rose-300 font-bold flex items-center gap-2"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>{t.downloadAudioBtn} (.webm)</span>
+                      <Download className="w-4 h-4" />
+                      <span>{t.downloadAudioBtn}</span>
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={handleNativeShareWithFiles}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 font-semibold flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold flex items-center gap-2"
                   >
-                    <Share2 className="w-3.5 h-3.5" />
+                    <Share2 className="w-4 h-4" />
                     <span>{t.quickShareBtn}</span>
                   </button>
                 </div>
               </div>
 
               {/* Step 2: Open Email or Zalo */}
-              <div className="p-3 rounded-xl bg-[#07111E] border border-slate-800 space-y-2">
-                <div className="font-bold text-white">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <div className="font-bold text-slate-900">
                   {sendModal.channel === 'email'
                     ? '2. Mở ứng dụng Email (Đã điền sẵn người nhận anhpob@gmail.com):'
                     : '2. Mở Zalo +84 908 095693 và nhấn Dán (Ctrl+V):'}
                 </div>
 
                 {sendModal.channel === 'email' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <button
                       type="button"
                       onClick={openMailClient}
-                      className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#DFC89A] to-[#C9AD76] text-[#07111E] font-extrabold flex items-center justify-center gap-2 shadow-lg"
+                      className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold flex items-center justify-center gap-2 shadow"
                     >
-                      <Mail className="w-4 h-4" />
+                      <Mail className="w-5 h-5" />
                       <span>Mở App Email</span>
                     </button>
                     <button
                       type="button"
                       onClick={openGmailWeb}
-                      className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-bold flex items-center justify-center gap-2"
+                      className="py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-300 font-bold flex items-center justify-center gap-2"
                     >
-                      <ExternalLink className="w-4 h-4 text-[#DFC89A]" />
+                      <ExternalLink className="w-5 h-5 text-amber-600" />
                       <span>Mở Gmail Web</span>
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <button
                       type="button"
                       onClick={openZaloChat}
-                      className="py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold flex items-center justify-center gap-2 shadow-lg"
+                      className="py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold flex items-center justify-center gap-2 shadow"
                     >
-                      <MessageCircle className="w-4 h-4" />
+                      <MessageCircle className="w-5 h-5" />
                       <span>Mở Zalo +84 908 095693</span>
                     </button>
                     <button
                       type="button"
                       onClick={async () => {
                         await navigator.clipboard.writeText(buildFormattedBriefText());
-                        showToast('✓ Copied!');
+                        showToast('✓ Đã sao chép lại nội dung!');
                       }}
-                      className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-bold flex items-center justify-center gap-2"
+                      className="py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-300 font-bold flex items-center justify-center gap-2"
                     >
-                      <Copy className="w-4 h-4 text-[#DFC89A]" />
-                      <span>Copy Text</span>
+                      <Copy className="w-5 h-5 text-amber-600" />
+                      <span>Copy lại nội dung</span>
                     </button>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-800 flex justify-end">
+            <div className="pt-3 border-t border-slate-200 flex justify-end">
               <button
                 type="button"
                 onClick={() =>
                   setSendModal({ open: false, channel: null, sendingCloud: false, cloudSent: false })
                 }
-                className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
+                className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-sm font-bold text-slate-800"
               >
                 {t.a4CloseBtn}
               </button>
@@ -1801,41 +2101,41 @@ export default function App() {
         id="a4-print-wrapper"
         className={
           showA4Preview
-            ? 'fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm overflow-y-auto py-6 px-3 flex flex-col items-center'
+            ? 'fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm overflow-y-auto py-6 px-3 flex flex-col items-center'
             : 'fixed -left-[9999px] top-0 pointer-events-none opacity-0'
         }
       >
         {showA4Preview && (
-          <div className="no-print max-w-[210mm] w-full mb-3 flex flex-wrap items-center justify-between gap-2 bg-[#0C1B2E] border border-[#DFC89A]/40 px-4 py-2.5 rounded-xl shadow-xl">
+          <div className="no-print max-w-[210mm] w-full mb-3 flex flex-wrap items-center justify-between gap-2 bg-white border-2 border-slate-300 px-4 py-3 rounded-2xl shadow-xl">
             <div className="flex items-center gap-2">
-              <span className="text-xs sm:text-sm font-bold text-[#DFC89A]">
+              <span className="text-sm sm:text-base font-extrabold text-slate-900">
                 {t.a4PreviewBanner}
               </span>
-              <span className="text-[11px] text-slate-400 hidden sm:inline">{t.a4PreviewSub}</span>
+              <span className="text-xs text-slate-500 hidden sm:inline">{t.a4PreviewSub}</span>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handlePrintA4}
-                className="px-3 py-1.5 rounded-lg bg-[#DFC89A] text-[#07111E] font-bold text-xs flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-slate-900 text-amber-300 font-bold text-sm flex items-center gap-1.5"
               >
-                <Printer className="w-3.5 h-3.5" /> {t.printA4Btn}
+                <Printer className="w-4 h-4" /> {t.printA4Btn}
               </button>
               <button
                 type="button"
                 onClick={handleDownloadPdf}
                 disabled={isGeneratingPdf}
-                className="px-3 py-1.5 rounded-lg bg-sky-500 text-slate-950 font-bold text-xs flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm flex items-center gap-1.5"
               >
-                <FileDown className="w-3.5 h-3.5" />{' '}
+                <FileDown className="w-4 h-4" />{' '}
                 {isGeneratingPdf ? t.generatingPdf : t.downloadPdfBtn}
               </button>
               <button
                 type="button"
                 onClick={() => setShowA4Preview(false)}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs font-semibold flex items-center gap-1"
+                className="px-4 py-2 rounded-xl bg-slate-200 text-slate-800 hover:bg-slate-300 text-sm font-bold flex items-center gap-1"
               >
-                <X className="w-3.5 h-3.5" /> {t.a4CloseBtn}
+                <X className="w-4 h-4" /> {t.a4CloseBtn}
               </button>
             </div>
           </div>
@@ -1975,7 +2275,6 @@ export default function App() {
             </div>
             <div className="border border-slate-300 rounded-b p-2">
               <div className="grid grid-cols-3 gap-2 text-[9.5px]">
-                {/* Col A */}
                 <div className="border-r border-slate-200 pr-2">
                   <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColInfra}</div>
                   {t.infraOptions.map((item, idx) => (
@@ -1988,7 +2287,6 @@ export default function App() {
                   ))}
                 </div>
 
-                {/* Col B: Scale + Target Languages (Việt, Anh, Hoa, Nhật, Hàn) */}
                 <div className="border-r border-slate-200 pr-2">
                   <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColScale}</div>
                   {t.scaleOptions.map((item, idx) => (
@@ -2009,7 +2307,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Col C */}
                 <div>
                   <div className="font-bold text-[#0C1B2E] mb-1 underline">{t.a4ColSec}</div>
                   {t.securityOptions.map((item, idx) => (
@@ -2106,7 +2403,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Render up to 4 captured images compactly so A4 stays 1 page */}
               {capturedImages.length > 0 && (
                 <div className="pt-1 border-t border-slate-200">
                   <div className="font-semibold mb-1">{t.a4AttachedPhotos}</div>
