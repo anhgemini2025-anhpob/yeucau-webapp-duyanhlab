@@ -34,14 +34,18 @@ import {
   ChevronUp,
   Bot,
   Send,
-  PhoneCall
+  PhoneCall,
+  Globe,
+  Plus,
+  Search
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import {
   LangCode,
   SUPPORTED_LANGUAGES,
-  APP_TARGET_LANGUAGES
+  APP_TARGET_LANGUAGES,
+  WORLD_LANGUAGES_LIST
 } from './i18n';
 
 interface CapturedImage {
@@ -655,6 +659,9 @@ export default function App() {
 
   // Step 3 State (Merged 3-4-5 into 1 clean screen)
   const [selectedAppLangsIdx, setSelectedAppLangsIdx] = useState<number[]>([0, 1]);
+  const [extraAppLangs, setExtraAppLangs] = useState<string[]>([]);
+  const [showWorldLangs, setShowWorldLangs] = useState<boolean>(false);
+  const [customLangInput, setCustomLangInput] = useState<string>('');
   const [userScopeIdx, setUserScopeIdx] = useState<number>(1);
   const [timelineIdx, setTimelineIdx] = useState<number>(1);
   const [referenceLink, setReferenceLink] = useState('');
@@ -753,6 +760,22 @@ export default function App() {
     }
   };
 
+  const toggleExtraAppLang = (langName: string) => {
+    setExtraAppLangs((prev) =>
+      prev.includes(langName) ? prev.filter((item) => item !== langName) : [...prev, langName]
+    );
+  };
+
+  const handleAddCustomLang = () => {
+    const clean = customLangInput.trim();
+    if (!clean) return;
+    if (!extraAppLangs.includes(clean)) {
+      setExtraAppLangs((prev) => [...prev, clean]);
+      showToast(`✓ Đã thêm ngôn ngữ: ${clean}`);
+    }
+    setCustomLangInput('');
+  };
+
   // Toggle a sample suggestion and append/remove it cleanly in wishText
   const handleToggleSuggestion = (idx: number) => {
     const textItem = c.suggestionsList[idx];
@@ -786,6 +809,9 @@ export default function App() {
     setSelectedSuggestionsIdx([]);
     setShowSuggestions(false);
     setSelectedAppLangsIdx([0, 1]);
+    setExtraAppLangs([]);
+    setShowWorldLangs(false);
+    setCustomLangInput('');
     setUserScopeIdx(1);
     setTimelineIdx(1);
     setReferenceLink('');
@@ -1068,7 +1094,11 @@ export default function App() {
   };
 
   const appLangOptions = APP_TARGET_LANGUAGES[lang];
-  const selectedAppLangs = selectedAppLangsIdx.map((i) => appLangOptions[i]).filter(Boolean);
+  const primaryAppLangs = selectedAppLangsIdx.map((i) => appLangOptions[i]).filter(Boolean);
+  const selectedAppLangs = [...primaryAppLangs, ...extraAppLangs];
+  const filteredWorldLangs = WORLD_LANGUAGES_LIST.filter((wLang) =>
+    wLang.toLowerCase().includes(customLangInput.trim().toLowerCase())
+  );
   const selectedScope = c.userScopeOptions[userScopeIdx] || c.userScopeOptions[1];
   const selectedTimeline = c.timelineOptions[timelineIdx] || c.timelineOptions[1];
   const usageLabelText = usageType === 'personal' ? c.personalUsage : c.companyUsage;
@@ -1376,13 +1406,21 @@ export default function App() {
                   key={l.code}
                   type="button"
                   onClick={() => setLang(l.code)}
-                  className={`text-xs sm:text-sm font-bold px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
+                  className={`text-xs sm:text-sm font-bold px-2.5 py-1.5 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap ${
                     lang === l.code
                       ? 'bg-slate-900 text-amber-300 shadow-md'
                       : 'text-slate-700 hover:bg-white hover:text-slate-950'
                   }`}
                 >
-                  <span>{l.flag}</span>
+                  <span
+                    className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                      lang === l.code
+                        ? 'bg-amber-400 text-slate-950'
+                        : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {l.badge}
+                  </span>
                   <span>{l.shortLabel}</span>
                 </button>
               ))}
@@ -1704,14 +1742,22 @@ export default function App() {
                   <p className="text-base sm:text-lg text-slate-600 mt-1">{c.s3Sub}</p>
                 </div>
 
-                {/* 1. Target Languages (Việt, Anh, Hoa, Nhật, Hàn) */}
-                <div className="bg-amber-50/60 border-2 border-amber-200 rounded-2xl p-4">
-                  <label className="block text-base sm:text-lg font-extrabold text-slate-900 mb-2.5">
-                    {c.appLangLabel}
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {/* 1. Target Languages (5 Popular + Custom Input + Full World Languages List) */}
+                <div className="bg-amber-50/60 border-2 border-amber-200 rounded-2xl p-4 space-y-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900">
+                      {c.appLangLabel}
+                    </label>
+                    <span className="text-xs sm:text-sm font-bold text-amber-900 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+                      Đã chọn: {selectedAppLangs.length} ngôn ngữ
+                    </span>
+                  </div>
+
+                  {/* 5 Primary Languages (Clean single-line layout without broken flag emojis) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
                     {appLangOptions.map((label, idx) => {
                       const active = selectedAppLangsIdx.includes(idx);
+                      const badgeCodes = ['VI', 'EN', 'ZH', 'JA', 'KO'];
                       return (
                         <button
                           key={idx}
@@ -1719,18 +1765,163 @@ export default function App() {
                           onClick={() =>
                             toggleIndex(selectedAppLangsIdx, setSelectedAppLangsIdx, idx)
                           }
-                          className={`text-sm sm:text-base font-bold py-3 px-3 rounded-xl border-2 transition flex items-center justify-center gap-1.5 ${
+                          className={`text-sm sm:text-base font-bold py-3 px-3.5 rounded-xl border-2 transition flex items-center justify-between gap-2 whitespace-nowrap ${
                             active
-                              ? 'bg-slate-900 text-amber-300 border-slate-900 shadow'
-                              : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500'
+                              ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-md'
+                              : 'bg-white text-slate-800 border-slate-300 hover:border-slate-600'
                           }`}
                         >
-                          <span>{active ? '✓' : '+'}</span>
-                          <span>{label}</span>
+                          <div className="flex items-center gap-2 truncate">
+                            <span
+                              className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded shrink-0 ${
+                                active
+                                  ? 'bg-amber-400 text-slate-950'
+                                  : 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {badgeCodes[idx]}
+                            </span>
+                            <span className="truncate">{label}</span>
+                          </div>
+                          <span className="font-extrabold shrink-0 text-base">
+                            {active ? '✓' : '+'}
+                          </span>
                         </button>
                       );
                     })}
                   </div>
+
+                  {/* Selected Extra / World Languages Pills */}
+                  {extraAppLangs.length > 0 && (
+                    <div className="pt-1 flex flex-wrap items-center gap-2">
+                      <span className="text-xs sm:text-sm font-bold text-slate-700">
+                        Ngôn ngữ bổ sung đã chọn:
+                      </span>
+                      {extraAppLangs.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => toggleExtraAppLang(item)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-amber-300 text-xs sm:text-sm font-bold shadow hover:bg-slate-800 transition"
+                          title="Nhấn để bỏ chọn"
+                        >
+                          <span>✓ {item}</span>
+                          <X className="w-3.5 h-3.5 text-amber-200 hover:text-white" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Custom Language Input + Toggle Full World Languages List */}
+                  <div className="pt-2 border-t border-amber-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <div className="relative flex-1 flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={customLangInput}
+                          onChange={(e) => {
+                            setCustomLangInput(e.target.value);
+                            if (e.target.value.trim() && !showWorldLangs) {
+                              setShowWorldLangs(true);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddCustomLang();
+                            }
+                          }}
+                          placeholder="Đánh tên ngôn ngữ bất kỳ (VD: Pháp, Đức, Nga, Ả Rập...) hoặc tìm kiếm..."
+                          className="w-full bg-white border-2 border-slate-300 focus:border-slate-900 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base font-semibold text-slate-900 placeholder-slate-400 outline-none transition"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddCustomLang}
+                        className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold text-sm sm:text-base shrink-0 flex items-center gap-1.5 shadow transition"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Thêm</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowWorldLangs(!showWorldLangs)}
+                      className={`px-4 py-2.5 rounded-xl border-2 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shrink-0 transition ${
+                        showWorldLangs
+                          ? 'bg-amber-200 border-amber-600 text-slate-950'
+                          : 'bg-white hover:bg-amber-100 border-amber-400 text-slate-900'
+                      }`}
+                    >
+                      <Globe className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>
+                        {showWorldLangs
+                          ? 'Thu gọn danh sách ngôn ngữ'
+                          : 'Danh sách tất cả ngôn ngữ thế giới (100+)'}
+                      </span>
+                      {showWorldLangs ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Expandable Grid of All World Languages */}
+                  {showWorldLangs && (
+                    <div className="p-3.5 rounded-2xl bg-white border-2 border-amber-300 space-y-2.5 shadow-inner">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm font-bold text-slate-700">
+                        <span>
+                          🌍 Chạm để chọn bất kỳ ngôn ngữ nào trên thế giới (hoặc chọn Đa ngôn ngữ toàn cầu):
+                        </span>
+                        {extraAppLangs.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setExtraAppLangs([])}
+                            className="text-xs font-bold text-rose-600 hover:underline"
+                          >
+                            Xóa các ngôn ngữ bổ sung
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-56 overflow-y-auto thin-scroll pr-1">
+                        {filteredWorldLangs.map((wLang) => {
+                          const isSelected = extraAppLangs.includes(wLang);
+                          return (
+                            <button
+                              key={wLang}
+                              type="button"
+                              onClick={() => toggleExtraAppLang(wLang)}
+                              className={`text-left text-xs sm:text-sm font-bold px-3 py-2.5 rounded-xl border transition flex items-center justify-between gap-2 ${
+                                isSelected
+                                  ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-sm'
+                                  : 'bg-slate-50 hover:bg-amber-50 text-slate-800 border-slate-200 hover:border-amber-400'
+                              }`}
+                            >
+                              <span className="truncate">{wLang}</span>
+                              <span className="shrink-0 font-extrabold">
+                                {isSelected ? '✓' : '+'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                        {filteredWorldLangs.length === 0 && customLangInput.trim() && (
+                          <div className="col-span-full py-3 text-center">
+                            <button
+                              type="button"
+                              onClick={handleAddCustomLang}
+                              className="px-4 py-2 rounded-xl bg-slate-900 text-amber-300 font-bold text-sm"
+                            >
+                              + Thêm ngôn ngữ &quot;{customLangInput.trim()}&quot;
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2 & 3. User Scope + Timeline side by side */}
@@ -2604,7 +2795,7 @@ export default function App() {
               <div>
                 <span className="font-semibold text-slate-700">• Ngôn ngữ tích hợp trên Web App: </span>
                 <span className="font-extrabold text-[#0C1B2E]">
-                  {selectedAppLangs.join('  |  ') || '🇻🇳 Tiếng Việt'}
+                  {selectedAppLangs.join('  |  ') || 'Tiếng Việt'}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-1 border-t border-slate-200">
