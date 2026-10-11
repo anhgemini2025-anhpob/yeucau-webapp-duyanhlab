@@ -28,6 +28,7 @@ import {
   Languages,
   ArrowRight,
   ArrowLeft,
+  ArrowUp,
   Edit3,
   CheckCheck
 } from 'lucide-react';
@@ -1894,55 +1895,129 @@ export default function App() {
             </div>
           </div>
         </main>
+      </div>
 
-        {/* COMPACT, CLEAN FOOTER INTRODUCING DUY ANH DIGITAL LAB */}
-        <footer className="bg-white border border-slate-200/90 rounded-2xl px-4 py-3 shadow-sm">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-xs sm:text-sm">
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-slate-700">
-              <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-amber-600" />
-                DUY ANH DIGITAL LAB:
-              </span>
-              <span>{t.footerDesc}</span>
+      {/* ==================== EXACT FOOTER FROM UNGDUNG.VERCEL.APP ==================== */}
+      <footer id="about" className="no-print bg-[#050B14] border-t border-amber-500/20 text-slate-300 text-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-10">
+            {/* Brand Col */}
+            <div className="md:col-span-5 space-y-4">
+              <a
+                href="https://ungdung.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3.5 p-2 pr-5 rounded-2xl bg-[#0A192F] border border-amber-400/40 shadow-md shadow-black/50 hover:border-amber-400 transition-all"
+              >
+                <img
+                  src="/logo-duyanhlab.jpg"
+                  alt="DUY ANH LAB • digital"
+                  className="h-11 w-auto object-contain rounded"
+                />
+                <div className="border-l border-slate-700/60 pl-3.5">
+                  <div className="text-xs sm:text-sm font-bold text-amber-300 uppercase tracking-wide">
+                    Duy Anh Lab
+                  </div>
+                  <div className="text-xs text-slate-300 font-mono">
+                    Real-World Software Engineering
+                  </div>
+                </div>
+              </a>
+
+              <p className="text-slate-300 max-w-md leading-relaxed text-sm sm:text-base">
+                Chuyên thiết kế &amp; phát triển các ứng dụng Web chuyên sâu, giải pháp AI và phần mềm thực chiến phục vụ mọi ý tưởng: từ kinh doanh B2B, nghiên cứu R&amp;D, quản lý hộ kinh doanh đến giáo dục học tập và đời sống.
+              </p>
+
+              <div className="text-xs text-amber-300/90 font-mono font-bold">
+                &quot;MONG MUỐN → Ý TƯỞNG → HIỆN THỰC&quot;
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 shrink-0">
-              <a
-                href="https://duy-anh-digital-lab.vercel.app"
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-1 rounded-full bg-slate-900 text-amber-300 font-bold text-xs sm:text-sm flex items-center gap-1 hover:bg-slate-800 transition"
-              >
-                <span>🌐 duy-anh-digital-lab.vercel.app</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href="https://ungdung.vercel.app"
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs sm:text-sm flex items-center gap-1 hover:bg-slate-200 transition"
-              >
-                <span>🚀 ungdung.vercel.app</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href="mailto:anhpob@gmail.com"
-                className="font-bold text-slate-700 hover:text-amber-700 px-1"
-              >
-                📧 anhpob@gmail.com
-              </a>
-              <a
-                href="https://zalo.me/84908095693"
-                target="_blank"
-                rel="noreferrer"
-                className="font-bold text-sky-700 hover:text-sky-600 px-1"
-              >
-                💬 Zalo: +84 908 095693
-              </a>
+            {/* Quick Links */}
+            <div className="md:col-span-3 space-y-3.5">
+              <h4 className="font-extrabold text-amber-300 text-base">Danh Mục Giải Pháp</h4>
+              <ul className="space-y-2.5 text-sm sm:text-base">
+                <li>
+                  <a
+                    href="https://ungdung.vercel.app/#featured"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-300 hover:text-amber-300 transition-colors"
+                  >
+                    Ứng dụng tiêu biểu
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://ungdung.vercel.app/#apps"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-300 hover:text-amber-300 transition-colors"
+                  >
+                    Hệ sinh thái Web &amp; AI
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://ungdung.vercel.app/#domains"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-300 hover:text-amber-300 transition-colors"
+                  >
+                    Các nhóm ngành trọng điểm
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://ungdung.vercel.app/#tech"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-300 hover:text-amber-300 transition-colors"
+                  >
+                    Kiến trúc công nghệ
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Consultation & Support Information */}
+            <div className="md:col-span-4 space-y-3.5">
+              <h4 className="font-extrabold text-amber-300 text-base">Tư Vấn &amp; Hiện Thực Hóa</h4>
+              <p className="leading-relaxed text-slate-300 text-sm">
+                Bạn có ý tưởng trong cuộc sống, kinh doanh, học tập hay công việc cần hiện thực hóa thành ứng dụng Web riêng biệt? Đội ngũ kỹ thuật luôn sẵn sàng đồng hành, tư vấn kiến trúc giải pháp và phát triển sản phẩm thực tế theo yêu cầu riêng của bạn.
+              </p>
+              <div className="pt-1 flex items-center gap-2 text-xs text-amber-400/90 font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span>Liên hệ tư vấn &amp; trao đổi dự án qua khung liên hệ trực tiếp phía trên</span>
+              </div>
             </div>
           </div>
-        </footer>
-      </div>
+
+          {/* Bottom Bar */}
+          <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm">
+            <div className="text-slate-400">
+              © 2026 DUY ANH DIGITAL LAB •{' '}
+              <a
+                href="https://ungdung.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-400 font-bold hover:underline"
+              >
+                ungdung.vercel.app
+              </a>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0A192F] hover:bg-amber-400 text-amber-300 hover:text-slate-950 transition-all border border-amber-400/30 font-bold cursor-pointer text-xs sm:text-sm"
+            >
+              <span>Về đầu trang</span>
+              <ArrowUp className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </footer>
 
       {/* ==================== MODAL GỬI EMAIL / ZALO KÈM FILE ĐÍNH KÈM ==================== */}
       {sendModal.open && (
